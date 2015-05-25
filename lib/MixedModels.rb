@@ -5,3 +5,4 @@ module MixedModels
 end
 
 require "MixedModels/food.rb"
+require "MixedModels/matrix_methods.rb"

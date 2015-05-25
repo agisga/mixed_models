@@ -9,9 +9,10 @@ Gem::Specification.new do |spec|
   spec.authors       = ["agisga"]
   spec.email         = ["alexej.go@googlemail.com"]
 
-  spec.summary       = %q{Fit mixed effects models in Ruby}
-  spec.description   = %q{TODO: Write a longer description or delete this line.}
-  spec.homepage      = "TODO: Put your gem's website or public repo URL here."
+  spec.summary       = %q{Mixed effects models in Ruby}
+  spec.description   = %q{Fit statistical linear models with fixed and mixed (random) effects in Ruby}
+  #spec.homepage      = "TODO: Put your gem's website or public repo URL here."
+  spec.license       = "BSD-3-Clause"
 
   # Prevent pushing this gem to RubyGems.org by setting 'allowed_push_host', or
   # delete this section to allow pushing this gem to any host.
