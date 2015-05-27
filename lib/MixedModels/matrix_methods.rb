@@ -2,11 +2,27 @@ require 'nmatrix'
 
 class NMatrix
 
-  def kron_prod_1D(NMatrix v)
-    unless self.dimensions==1 and v.dimensions==1
-      raise ArgumentError, "Implemented for 1D matrices (i.e. of shape [n]) only."
+  # Compute the the Kronecker product of two row vectors (NMatrix of shape [1,n])
+  #
+  # === Arguments
+  #
+  #   * +v+ - A NMatrix of shape [1,n] (i.e. a row vector)
+  #
+  # === Usage 
+  #
+  #  a = NMatrix.new([1,3], [0,1,0])
+  #  b = NMatrix.new([1,2], [3,2])
+  #  a.kron_prod_1D b #  =>  [ [0, 0, 3, 2, 0, 0] ]
+  #  
+  def kron_prod_1D(v)
+    unless self.dimensions==2 and v.dimensions==2 and self.shape[0]==1 and v.shape[0]==1
+      raise ArgumentError, "Implemented for NMatrix of shape [1,n] (i.e. one row) only."
     end
-    self.dot v.transpose
+    #TODO: maybe some outer product function from LAPACK would be more efficient to compute for m
+    m = self.transpose.dot v
+    l = self.shape[1]*v.shape[1]
+    m.reshape!([1,l])
+    return m
   end
 
   class << self
@@ -21,7 +37,7 @@ class NMatrix
     #                the blocks of the desired block-diagonal matrix, which are supplied
     #                as square 2D NMatrix objects.
     #
-    # ==== Usage Example
+    # ==== Usage
     #
     #  a = NMatrix.new([2,2],[1,2,3,4])
     #  b = NMatrix.new([1,1],[123],dtype: :int32)
