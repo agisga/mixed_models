@@ -13,7 +13,24 @@ describe NMatrix do
           b = NMatrix.new([1,2], [3,2], dtype: dtype, stype: stype)
           m = a.kron_prod_1D b
           it "Compute the Kronecker product of two [1,n] NMatrix objects" do
-            expect(m).to eq(NMatrix.new([1,6],[0, 0, 3, 2, 0, 0]), dtype: dtype, stype: stype)
+            expect(m).to eq(NMatrix.new([1,6],[0, 0, 3, 2, 0, 0], dtype: dtype, stype: stype))
+          end
+        end
+      end
+    end
+  end
+
+  ALL_DTYPES.each do |dtype|
+    [:dense, :yale].each do |stype|
+      context "#khatri_rao_rows #{dtype} #{stype}" do
+        before do 
+          a = NMatrix.new([3,2], [1,2,1,2,1,2], dtype: dtype, stype: stype)
+          b = NMatrix.new([3,2], (1..6).to_a, dtype: dtype, stype: stype)
+          m = a.khatri_rao_rows b
+          it "Compute the simplified Khatri-Rao product of two NMatrix objects" do
+            expect(m).to eq(NMatrix.new([3,4], [1.0, 2.0,  2.0,  4.0,
+                                                3.0, 4.0,  6.0,  8.0,
+                                                5.0, 6.0, 10.0, 12.0], dtype: dtype, stype: stype))
           end
         end
       end

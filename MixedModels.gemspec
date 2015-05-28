@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
 
   spec.summary       = %q{Mixed effects models in Ruby}
   spec.description   = %q{Fit statistical linear models with fixed and mixed (random) effects in Ruby}
-  #spec.homepage      = "TODO: Put your gem's website or public repo URL here."
+  spec.homepage      = "https://github.com/agisga/MixedModels.git"
   spec.license       = "BSD-3-Clause"
 
   # Prevent pushing this gem to RubyGems.org by setting 'allowed_push_host', or

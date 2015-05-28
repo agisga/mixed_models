@@ -25,6 +25,35 @@ class NMatrix
     return m
   end
 
+  # Compute a simplified version of the Khatri-Rao product of +self+ and other NMatrix +mat+.
+  # The i'th row of the resulting matrix is the Kronecker product of the i'th row of +self+
+  # and the i'th row of +mat+.
+  #
+  # === Arguments
+  #
+  # * +mat+ - A 2D NMatrix object
+  #
+  # === Usage
+  #
+  # a = NMatrix.new([3,2], [1,2,1,2,1,2], dtype: dtype, stype: stype)
+  # b = NMatrix.new([3,2], (1..6).to_a, dtype: dtype, stype: stype)
+  # m = a.khatri_rao_rows b # =>  [ [1.0, 2.0,  2.0,  4.0,
+  #                                  3.0, 4.0,  6.0,  8.0,
+  #                                  5.0, 6.0, 10.0, 12.0] ]
+  #
+  def khatri_rao_rows(mat)
+    raise NotImplementedError, "Implemented for 2D matrices only" unless self.dimensions==2 and mat.dimensions==2
+    n = self.shape[0]
+    raise NotImplementedError, "Both matrices must have the same number of rows" unless n==mat.shape[0]
+    m = self.shape[1]*mat.shape[1]
+    khrao_prod = NMatrix.new([n,m], dtype: :float64)
+    (0...n).each do |i|
+      kr_prod = self.row(i).kron_prod_1D mat.row(i)
+      khrao_prod[i,0...m] = kr_prod
+    end
+    return khrao_prod
+  end
+
   class << self
 
     # Generate a block-diagonal NMatrix from the supplied 2D square matrices.
