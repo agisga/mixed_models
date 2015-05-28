@@ -21,8 +21,7 @@ class NMatrix
     #TODO: maybe some outer product function from LAPACK would be more efficient to compute for m
     m = self.transpose.dot v
     l = self.shape[1]*v.shape[1]
-    m.reshape!([1,l])
-    return m
+    return m.reshape([1,l])
   end
 
   # Compute a simplified version of the Khatri-Rao product of +self+ and other NMatrix +mat+.

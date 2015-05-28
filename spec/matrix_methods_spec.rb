@@ -8,12 +8,10 @@ describe NMatrix do
   ALL_DTYPES.each do |dtype|
     [:dense, :yale].each do |stype|
       context "#kron_prod_1D #{dtype} #{stype}" do
-        before do 
+        it "Compute the Kronecker product of two [1,n] NMatrix objects" do
           a = NMatrix.new([1,3], [0,1,0], dtype: dtype, stype: stype)
           b = NMatrix.new([1,2], [3,2], dtype: dtype, stype: stype)
-          m = NMatrix.new([1,6],[0, 0, 3, 2, 0, 0], dtype: dtype, stype: stype)
-        end
-        it "Compute the Kronecker product of two [1,n] NMatrix objects" do
+          m = NMatrix.new([1,6], [0, 0, 3, 2, 0, 0], dtype: dtype, stype: stype)
           expect(a.kron_prod_1D b).to eq(m)
         end
       end
@@ -23,14 +21,12 @@ describe NMatrix do
   ALL_DTYPES.each do |dtype|
     [:dense, :yale].each do |stype|
       context "#khatri_rao_rows #{dtype} #{stype}" do
-        before do 
+        it "Compute the simplified Khatri-Rao product of two NMatrix objects" do
           a = NMatrix.new([3,2], [1,2,1,2,1,2], dtype: dtype, stype: stype)
           b = NMatrix.new([3,2], (1..6).to_a, dtype: dtype, stype: stype)
           m = NMatrix.new([3,4], [1, 2,  2,  4,
                                   3, 4,  6,  8,
                                   5, 6, 10, 12], dtype: dtype, stype: stype)
-        end
-        it "Compute the simplified Khatri-Rao product of two NMatrix objects" do
           expect(a.khatri_rao_rows b).to eq(m)
         end
       end
