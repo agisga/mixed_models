@@ -11,10 +11,10 @@ describe NMatrix do
         before do 
           a = NMatrix.new([1,3], [0,1,0], dtype: dtype, stype: stype)
           b = NMatrix.new([1,2], [3,2], dtype: dtype, stype: stype)
-          m = a.kron_prod_1D b
-          it "Compute the Kronecker product of two [1,n] NMatrix objects" do
-            expect(m).to eq(NMatrix.new([1,6],[0, 0, 3, 2, 0, 0], dtype: dtype, stype: stype))
-          end
+          m = NMatrix.new([1,6],[0, 0, 3, 2, 0, 0], dtype: dtype, stype: stype)
+        end
+        it "Compute the Kronecker product of two [1,n] NMatrix objects" do
+          expect(a.kron_prod_1D b).to eq(m)
         end
       end
     end
@@ -26,12 +26,12 @@ describe NMatrix do
         before do 
           a = NMatrix.new([3,2], [1,2,1,2,1,2], dtype: dtype, stype: stype)
           b = NMatrix.new([3,2], (1..6).to_a, dtype: dtype, stype: stype)
-          m = a.khatri_rao_rows b
-          it "Compute the simplified Khatri-Rao product of two NMatrix objects" do
-            expect(m).to eq(NMatrix.new([3,4], [1.0, 2.0,  2.0,  4.0,
-                                                3.0, 4.0,  6.0,  8.0,
-                                                5.0, 6.0, 10.0, 12.0], dtype: dtype, stype: stype))
-          end
+          m = NMatrix.new([3,4], [1, 2,  2,  4,
+                                  3, 4,  6,  8,
+                                  5, 6, 10, 12], dtype: dtype, stype: stype)
+        end
+        it "Compute the simplified Khatri-Rao product of two NMatrix objects" do
+          expect(a.khatri_rao_rows b).to eq(m)
         end
       end
     end
