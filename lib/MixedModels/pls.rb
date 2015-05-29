@@ -27,7 +27,7 @@ class Deviance
       raise ArgumentError, "x, y, zt, lambdat should be passed as NMatrix objects"
     end
     raise ArgumentError, "y.shape should be of the form [n,1]" unless y.shape[1]==1
-    raise ArgumentError, "weights should be passed as an array" unless weights.is_a?(Array)
+    raise ArgumentError, "weights should be passed as an array or nil" unless weights.is_a?(Array) or weights.nil?
 
     @x, @y, @zt, @lambdat, @thfun, @weights, @offset, @reml_flag = x, y, zt, lambdat, thfun, weights, offset, reml_flag 
     @n, @p, @q = @y.shape[0], @x.shape[1], @zt.shape[0]
@@ -102,9 +102,6 @@ class Deviance
     @pwrss = (@wtres.norm2)**2.0 + (@u.norm2)**2.0 # penalized, weighted residual sum-of-squares
     @logdet = 2.0 * Math::log(@l.det.abs) 
     @logdet += Math::log(@rxtrx.det.abs) if @reml_flag
-    puts @df
-    puts @logdet
-    puts @pwrss
     deviance = @logdet + @df * (1.0 + Math::log(2.0 * Math::PI * @pwrss) - Math::log(@df))
     return deviance
   end
