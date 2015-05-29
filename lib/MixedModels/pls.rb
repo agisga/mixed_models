@@ -1,7 +1,21 @@
+# Copyright (c) 2015 Alexej Gossmann 
+#
+# The following implementation is largely based on the paper Douglas Bates, Martin Maechler, 
+# Ben Bolker, Steve Walker, "Fitting Linear Mixed - Effects Models using lme4" (arXiv:1406.5823v1 [stat.CO]. 2014),
+# and the corresponding R implementation in the package lme4pureR (https://github.com/lme4/lme4pureR).
+#
+ 
 require 'nmatrix'
 
 # Create linear mixed model profiled deviance function
 # using the penalized least squares (PLS) approach.
+# The implementation is based on Bates et al. (2014) and the corresponding
+# R implementations in the package lme4pureR (https://github.com/lme4/lme4pureR).
+#
+# === References
+# 
+# * Douglas Bates, Martin Maechler, Ben Bolker, Steve Walker, 
+#   "Fitting Linear Mixed - Effects Models using lme4". arXiv:1406.5823v1 [stat.CO]. 2014.
 #
 class Deviance 
 
@@ -40,18 +54,17 @@ class Deviance
                NMatrix.identity(@n, dtype: :float64)
              else
                raise ArgumentError, "weights should have the same length as the response vector y" unless @weights.length==@n
-               NMatrix.diagonal(@weights, dtype: :float64)
+               NMatrix.diagonal(weights.map { |w| Math::sqrt(w) }, dtype: :float64)
              end
     
-    wx = @sqrtw.dot x
-    wy = @sqrtw.dot y
+    wx = @sqrtw.dot @x
+    wy = @sqrtw.dot @y
     @ztw = @zt.dot @sqrtw
     @xtwx = wx.transpose.dot wx
     @xtwy = wx.transpose.dot wy
     @ztwx = @ztw.dot wx
     @ztwy = @ztw.dot wy
-    wx = nil
-    wy = nil
+    wx, wy = nil, nil
 
     @b = NMatrix.new([@q,1], dtype: :float64)      # conditional mode of random effects
     @beta = NMatrix.new([@p,1], dtype: :float64)   # conditional estimate of fixed-effects
@@ -103,6 +116,14 @@ class Deviance
     @logdet = 2.0 * Math::log(@l.det.abs) 
     @logdet += Math::log(@rxtrx.det.abs) if @reml_flag
     deviance = @logdet + @df * (1.0 + Math::log(2.0 * Math::PI * @pwrss) - Math::log(@df))
+
+    # For debugging purposes
+    #puts (@y-@mu) 
+    #puts "wtres ss: #{(@wtres.norm2)**2.0}" # Only this disagrees with lme4pureR, but it seems that lme4pureR is wrong here...
+    #puts "u ss: #{(@u.norm2)**2.0}"
+    #puts "pwrss: #{@pwrss}"
+    #puts "logdet: #{@logdet}"
+
     return deviance
   end
 end
