@@ -98,6 +98,7 @@ class Deviance
     tmp_mat1, tmp_mat2 = nil, nil
     
     # solve the normal equations to get estimates +@beta+, +@u+ and +@b+
+    # TODO: use a triangular solve method where appropriate
     @cu = @l.solve(@lambdat.dot @ztwy) 
     #@rzx = @l.solve(@lambdat.dot @ztwx)
     @rzx = @l.inverse.dot(@lambdat.dot @ztwx) #TODO: make a solve method for this
@@ -111,18 +112,10 @@ class Deviance
     @wtres = @sqrtw.dot (@y-@mu)
 
     # evaluate the profiled deviance or the REML criterion
-    #@pwrss = (@wtres**2.0).sum + (@u**2.0).sum # penalized, weighted residual sum-of-squares
     @pwrss = (@wtres.norm2)**2.0 + (@u.norm2)**2.0 # penalized, weighted residual sum-of-squares
     @logdet = 2.0 * Math::log(@l.det.abs) 
     @logdet += Math::log(@rxtrx.det.abs) if @reml_flag
     deviance = @logdet + @df * (1.0 + Math::log(2.0 * Math::PI * @pwrss) - Math::log(@df))
-
-    # For debugging purposes
-    #puts (@y-@mu) 
-    #puts "wtres ss: #{(@wtres.norm2)**2.0}" # Only this disagrees with lme4pureR, but it seems that lme4pureR is wrong here...
-    #puts "u ss: #{(@u.norm2)**2.0}"
-    #puts "pwrss: #{@pwrss}"
-    #puts "logdet: #{@logdet}"
 
     return deviance
   end

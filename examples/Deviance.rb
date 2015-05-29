@@ -42,12 +42,8 @@ y = (x.dot beta) + (z.dot b) + epsilon
 # Set up the random effects covariance parameters
 lambdat = NMatrix.identity(10, dtype: :float64)
 thfun = Proc.new do |th| 
-  diag_array = [ th[0], th[1] ]
-  4.times { diag_array += [ th[0], th[1] ] }
-  m = NMatrix.diagonal(diag_array, dtype: :float64) 
-  (0..4).each { |i| m[2*i, 2*i+1] = th[2] }
-  all_array = m.to_flat_a
-  NMatrix.new([10,10], all_array, dtype: :float64)
+  diag_blocks = Array.new(5) { NMatrix.new([2,2], [th[0],th[2],0,th[1]], dtype: :float64) }
+  NMatrix.block_diagonal(*diag_blocks, dtype: :float64) 
 end
 
 # Set up the deviance function
@@ -55,5 +51,13 @@ dev_fun = Deviance.new(x: x, y: y, zt: z.transpose, lambdat: lambdat, thfun: thf
 reml_fun = Deviance.new(x: x, y: y, zt: z.transpose, lambdat: lambdat, thfun: thfun, reml_flag: true) 
 
 # Evaluate
-puts dev_fun.eval([1,1,1]) # lme4pureR gives 84.92657 here
-puts reml_fun.eval([1,1,1]) # lme4pureR gives 83.57897 here
+puts "Compare to values obtained by plsJSS from lme4pureR package in R"
+puts "Theta: [1,1,1]   \t MixedModels: ~#{dev_fun.eval([1,1,1]).round(3)}   \t lme4pureR: 97.24135 \t Difference: #{(dev_fun.eval([1,1,1]) - 97.24135).abs}"
+puts "Theta: [1,2,3]   \t MixedModels: ~#{dev_fun.eval([1,2,3]).round(3)}   \t lme4pureR: 106.0938 \t Difference: #{(dev_fun.eval([1,2,3]) - 106.0938).abs}"
+puts "Theta: [1,1,0.5] \t MixedModels: ~#{dev_fun.eval([1,1,0.5]).round(3)} \t\t lme4pureR: 95.18973 \t Difference: #{(dev_fun.eval([1,1,0.5]) - 95.18973).abs}"
+puts "Theta: [2,2,2]   \t MixedModels: ~#{dev_fun.eval([2,2,2]).round(3)}   \t lme4pureR: 104.0388 \t Difference: #{(dev_fun.eval([2,2,2]) - 104.0388).abs}"
+
+puts "Theta: [1,1,1]   \t MixedModels: ~#{reml_fun.eval([1,1,1]).round(3)}  \t\t lme4pureR: 94.90857 \t Difference: #{(reml_fun.eval([1,1,1]) - 94.90857).abs}"
+puts "Theta: [1,2,3]   \t MixedModels: ~#{reml_fun.eval([1,2,3]).round(3)}  \t lme4pureR: 101.9385 \t Difference: #{(reml_fun.eval([1,2,3]) - 101.9385).abs}"
+puts "Theta: [1,1,0.5] \t MixedModels: ~#{reml_fun.eval([1,1,0.5]).round(3)} \t\t lme4pureR: 93.34   \t Difference: #{(reml_fun.eval([1,1,0.5]) - 93.34).abs}"
+puts "Theta: [0.5,1,1] \t MixedModels: ~#{reml_fun.eval([0.5,1,1]).round(3)} \t\t lme4pureR: 94.99137 \t Difference: #{(reml_fun.eval([0.5,1,1]) - 94.99137).abs}"
