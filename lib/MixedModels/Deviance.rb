@@ -48,7 +48,7 @@ module MixedModels
       wtres = d.sqrtw.dot (d.y-d.mu)
 
       # (4) evaluate the profiled deviance or the REML criterion
-      pwrss = (wtres.norm2)**2.0 + (d.u.norm2)**2.0 # penalized, weighted residual sum-of-squares
+      pwrss = (wtres.norm2)**2.0 + (d.u.norm2)**2.0 # penalized weighted residual sum-of-squares
       logdet = 2.0 * Math::log(d.l.det.abs) 
       logdet += Math::log(rxtrx.det.abs) if reml
       logdet + df * (1.0 + Math::log(2.0 * Math::PI * pwrss) - Math::log(df))
