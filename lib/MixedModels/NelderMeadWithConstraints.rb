@@ -1,14 +1,24 @@
+# Nelder Mead Algorithm for Multidimensional Minimization with Bound Constraints
+#
+# This code was ported from the Ruby gem Minimization, available 
+# from https://github.com/clbustos/minimization.git. The Nelder-Mead 
+# algorithm from the Minimization gem, however, only allows for 
+# unconstrained optimization. Here, I have rewritten parts of the 
+# original code, and I have extended that algorithm to allow 
+# for bound constraints on the parameters. The approach is taken from 
+# J. A. Richardson and J. L. Kuester (1973) "The complex method for 
+# constrained optimization", with a modification proposed by the 
+# author of the C++ optimization library NLopt:
+#
+#  "Whenever a new point would lie outside the bound constraints, Box
+#  advocates moving it "just inside" the constraints.  I couldn't see any
+#  advantage to using a fixed distance inside the constraints, especially
+#  if the optimum is on the constraint, so instead I move the point
+#  exactly onto the constraint in that case."
+#  (source: https://github.com/stevengj/nlopt/blob/master/neldermead/README)
+#
 # Original implementation Copyright (c) 2010 Claudio Bustos
 # Modification Copyright (c) 2015 Alexej Gossmann 
-#
-# Nelder Mead Algorithm for Multidimensional minimization with box constraints
-#
-# This code was ported from the Ruby gem Minimization,
-# available from https://github.com/clbustos/minimization.git
-#
-# The original Ruby implementation of this algorith was adopted and ported
-# into Ruby from Apache-commons Math library's NelderMead.java file. Therefore 
-# this file is under Apache License Version 2.
 #
 
 module MixedModels
@@ -35,8 +45,8 @@ module MixedModels
 
   # = Nelder Mead Minimizer.
   # A multidimensional minimization methods.
-  # == Usage.
-  #  min=MixedModels::NelderMead.new(proc {|x| (x[0] - 2)**2 + (x[1] - 5)**2}, [1, 2])
+  # == Usage
+  #  min=MixedModels::NelderMead.new(start_point: [1,2]) {|x| (x[0] - 2)**2 + (x[1] - 5)**2}
   #  while min.converging?
   #    min.iterate
   #  end
@@ -77,19 +87,19 @@ module MixedModels
       end
 
       if lower_bound.nil? then
-        lower_bound = Array.new(n) { -Float::INFINITY }
+        @lower_bound = Array.new(n) { -Float::INFINITY }
       else
         raise "Lower bound should be of the same length as the start point" unless lower_bound.length == n
         @lower_bound = lower_bound 
       end
       if upper_bound.nil? then
-        upper_bound = Array.new(n) { Float::INFINITY }
+        @upper_bound = Array.new(n) { Float::INFINITY }
       else
         raise "Upper bound should be of the same length as the start point" unless upper_bound.length == n
         @upper_bound = upper_bound 
       end
-      0.upto(n-1) do
-        raise "Lower bounds should be smaller than upper bounds" unless lower_bound[i] < upper_bound[i]
+      0.upto(n-1) do |i|
+        raise "Lower bounds should be smaller than upper bounds" unless @lower_bound[i] < @upper_bound[i]
       end
 
       @iterations  = 0
@@ -178,7 +188,7 @@ module MixedModels
         curr       = current.value
         diff       = (pre - curr).abs
         size       = [pre.abs, curr.abs].max
-        return (diff <= (size * @relative_threshold)) and (diff <= @absolute_threshold)
+        return ((diff <= (size * @relative_threshold)) and (diff <= @absolute_threshold))
       end
 
       # returns true if converging is possible atleast in one direction
@@ -313,24 +323,9 @@ module MixedModels
       end
     end
 
-    # Convenience method to minimize
-    # == Parameters:
-    # * <tt>start_point</tt>: Starting points
-    # * <tt>f</tt>: Function to minimize
-    # == Usage:
-    #   minimizer=MixedModels::NelderMead.minimize(proc{|x| (x[0] - 1) ** 2 + (x[1] - 5) ** 2}, [0, 0])
-    #
-    def self.minimize(f, start_point)
-      min=MixedModels::NelderMead.new(f, start_point)
-      while min.converging?
-        min.iterate
-      end
-      return min
-    end
-
     # Iterate the simplex one step. Use this when iteration needs to be done manually
     # == Usage:
-    #   minimizer=MixedModels::NelderMead.new(proc{|x| (x[0] - 1) ** 2 + (x[1] - 5) ** 2}, [0, 0])
+    #   minimizer=MixedModels::NelderMead.new(start_point: [0,0]) {|x| (x[0] - 1) ** 2 + (x[1] - 5) ** 2}
     #   while minimizer.converging?
     #     minimizer.Iterate
     #   end
@@ -341,7 +336,7 @@ module MixedModels
       # set previous simplex as the current simplex
       @previous = Array.new(@simplex.length)
       0.upto(@simplex.length - 1) do |i|
-        point = @simplex[i].point                                # clone require?
+        point = @simplex[i].point 
         @previous[i] = PointValuePair.new(point, f(point))
       end
       # iterate simplex
@@ -349,6 +344,22 @@ module MixedModels
       # set results
       @x_minimum = @simplex[0].point
       @f_minimum = @simplex[0].value
+    end
+
+    # Convenience method to minimize
+    # == Parameters:
+    # * <tt>start_point</tt>: Starting points
+    # * <tt>f</tt>: Function to minimize
+    # == Usage:
+    #   minimizer=MixedModels::NelderMead.minimize(start_point: [0,0]) {|x| (x[0] - 1) ** 2 + (x[1] - 5) ** 2}
+    #
+    def self.minimize(start_point:, lower_bound: nil, upper_bound: nil, &f)
+      min=MixedModels::NelderMead.new(start_point: start_point, lower_bound: lower_bound, 
+                                      upper_bound: upper_bound, &f)
+      while min.converging?
+        min.iterate
+      end
+      return min
     end
   end
 end

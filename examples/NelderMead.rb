@@ -48,8 +48,8 @@ dev_fun = MixedModels::mk_lmm_dev_fun(model_data, false)
 reml_fun = MixedModels::mk_lmm_dev_fun(model_data, true)
 
 # Optimize the deviance
-min_dev_fun = MixedModels::NelderMead.minimize(dev_fun, [1,0,1])
-min_reml_fun = MixedModels::NelderMead.minimize(reml_fun, [1,0,1])
+min_dev_fun = MixedModels::NelderMead.minimize(start_point: [1,0,1], lower_bound: Array[0,-Float::INFINITY,0], &dev_fun)
+min_reml_fun = MixedModels::NelderMead.minimize(start_point: Array[1,0,1], lower_bound: Array[0,-Float::INFINITY,0], &reml_fun)
 
 puts "Minimum deviance at theta = #{min_dev_fun.x_minimum}"
 puts "Minimum REML criterion at theta = #{min_reml_fun.x_minimum}"
