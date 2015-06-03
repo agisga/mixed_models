@@ -28,9 +28,10 @@ module MixedModels
     attr_accessor :value
     attr_reader   :point
 
-    # == Parameters:
-    # * <tt>point</tt>: Coordinates of the point
-    # * <tt>value</tt>: Function value at the point
+    # === Arguments
+    # 
+    # * +point+ - Coordinates of the point
+    # * +value+ - Function value at the point
     #
     def initialize(point, value)
       @point = point.clone
@@ -43,9 +44,12 @@ module MixedModels
     end
   end
 
-  # = Nelder Mead Minimizer.
-  # A multidimensional minimization methods.
-  # == Usage
+  # Nelder Mead Minimizer with Bound Contraints. 
+  # A multidimensional minimization methods with the possibility
+  # to impose constraints lower_bound[i] <= x[i] <= upper_bound[i]
+  # for all i.
+  #
+  # === Usage
   #  min=MixedModels::NelderMead.new(start_point: [1,2]) {|x| (x[0] - 2)**2 + (x[1] - 5)**2}
   #  while min.converging?
   #    min.iterate
@@ -55,24 +59,28 @@ module MixedModels
   #
   class NelderMead
 
-    EPSILON_DEFAULT         = 1e-6
-    MAX_ITERATIONS_DEFAULT  = 1000000
-
     attr_reader :x_minimum, :f_minimum, :epsilon, :max_iterations
 
-    def initialize(start_point:, lower_bound: nil, upper_bound: nil, &f)
-      # Reflection coefficient
-      @rho   = 1.0
-      # Expansion coefficient
-      @khi   = 2.0
-      # Contraction coefficient
-      @gamma = 0.5
-      # Shrinkage coefficient
-      @sigma = 0.5
+    # === Arguments
+    #
+    #   * +start_point+   - an Array specifying the initial point for the minimization
+    #   * +lower_bound+   - an Array of lower bounds for each coordinate of the optimal solution 
+    #   * +upper_bound+   - an Array of upper bounds for each coordinate of the optimal solution 
+    #   * +epsilon+       - a small number specifying the thresholds for the convergence check: 
+    #                       +absolute_threshold+ = +epsilon+ and 
+    #                       +relative_threshold+ = 100 * +epsilon+
+    #   * +max_iterations+ - the maximum number of iterations
+    #   * +f+             - the objective function as a Proc object
+    #
+    def initialize(start_point:, lower_bound: nil, upper_bound: nil, 
+                   epsilon: 1e-6, max_iterations: 1e6, &f)
+      @rho   = 1.0 # Reflection coefficient
+      @khi   = 2.0 # Expansion coefficient
+      @gamma = 0.5 # Contraction coefficient
+      @sigma = 0.5 # Shrinkage coefficient
 
-      @epsilon             = EPSILON_DEFAULT
-      # Default number of maximum iterations
-      @max_iterations      = MAX_ITERATIONS_DEFAULT
+      @epsilon             = epsilon
+      @max_iterations      = max_iterations
       @relative_threshold  = 100 * @epsilon
       @absolute_threshold  = @epsilon
       @x_minimum           = nil
@@ -130,8 +138,9 @@ module MixedModels
     # then move the point inside the bounded region.
     # The returned value is the shifted point if it was necessary to move it
     # (otherwise the originally supplied point).
-    # == Parameters:
-    # * <tt>point</tt>: an array with the coordinates of the point
+    #
+    # === Arguments
+    #   * +point+ - an array with the coordinates of the point
     #
     def move_into_bounds(point)
       n = point.length
@@ -144,8 +153,9 @@ module MixedModels
     end
 
     # Build an initial simplex
-    # == Parameters:
-    # * <tt>start_point</tt>: starting point of the minimization search
+    #
+    # === Arguments
+    #   * +start_point+ - starting point of the minimization search
     #
     def build_simplex(start_point)
       n = start_point.length
@@ -223,8 +233,9 @@ module MixedModels
     end
 
     # Replace the worst point of the simplex by a new point
-    # == Parameters:
-    # * <tt>point_value_pair</tt>: point to insert
+    #
+    # === Arguments 
+    #   * +point_value_pair+ - point to insert
     #
     def replace_worst_point(point_value_pair)
       n = @simplex.length - 1
@@ -240,7 +251,7 @@ module MixedModels
       increment_iterations_counter
       
       # the simplex has n+1 point if dimension is n
-      n = @simplex.length - 1
+      n           = @simplex.length - 1
       best        = @simplex[0]
       secondWorst = @simplex[n - 1]
       worst       = @simplex[n]
@@ -299,20 +310,19 @@ module MixedModels
           # perform an inside contraction
           xc = Array.new(n)
           0.upto(n - 1) do |j|
-            xc[j] = centroid[j] - @gamma * (centroid[j] - x_worst[j])
+            xc[j] = centroid[j] + @gamma * (x_worst[j] - centroid[j])
           end
           xc = move_into_bounds(xc)
           in_contracted = PointValuePair.new(xc, f(xc))
-
           if (compare(in_contracted, worst) < 0)
             # accept the contraction point
             replace_worst_point(in_contracted)
             return
           end
         end
-        # perform a shrink
+        # if contraction failed, perform a shrink
         x_smallest = @simplex[0].point
-        0.upto(@simplex.length - 1) do |i|
+        0.upto(n) do |i|
           x = @simplex[i].get_point_clone
           0.upto(n - 1) do |j|
             x[j] = x_smallest[j] + @sigma * (x[j] - x_smallest[j])
@@ -324,10 +334,11 @@ module MixedModels
     end
 
     # Iterate the simplex one step. Use this when iteration needs to be done manually
-    # == Usage:
+    #
+    # === Usage
     #   minimizer=MixedModels::NelderMead.new(start_point: [0,0]) {|x| (x[0] - 1) ** 2 + (x[1] - 5) ** 2}
     #   while minimizer.converging?
-    #     minimizer.Iterate
+    #     minimizer.iterate
     #   end
     #   minimizer.x_minimum
     #   minimizer.f_minimum
@@ -347,15 +358,26 @@ module MixedModels
     end
 
     # Convenience method to minimize
-    # == Parameters:
-    # * <tt>start_point</tt>: Starting points
-    # * <tt>f</tt>: Function to minimize
-    # == Usage:
+    #
+    # === Arguments
+    #
+    #   * +start_point+   - an Array specifying the initial point for the minimization
+    #   * +lower_bound+   - an Array of lower bounds for each coordinate of the optimal solution 
+    #   * +upper_bound+   - an Array of upper bounds for each coordinate of the optimal solution 
+    #   * +epsilon+       - a small number specifying the thresholds for the convergence check: 
+    #                       +absolute_threshold+ = +epsilon+ and 
+    #                       +relative_threshold+ = 100 * +epsilon+
+    #   * +max_iterations+ - the maximum number of iterations
+    #   * +f+             - the objective function as a Proc object
+    #   
+    # === Usage
     #   minimizer=MixedModels::NelderMead.minimize(start_point: [0,0]) {|x| (x[0] - 1) ** 2 + (x[1] - 5) ** 2}
     #
-    def self.minimize(start_point:, lower_bound: nil, upper_bound: nil, &f)
+    def self.minimize(start_point:, lower_bound: nil, upper_bound: nil, 
+                      epsilon: 1e-6, max_iterations: 1e6, &f)
       min=MixedModels::NelderMead.new(start_point: start_point, lower_bound: lower_bound, 
-                                      upper_bound: upper_bound, &f)
+                                      upper_bound: upper_bound, epsilon: epsilon, 
+                                      max_iterations: max_iterations, &f)
       while min.converging?
         min.iterate
       end

@@ -1,6 +1,6 @@
 require 'MixedModels'
-require 'distribution'
 
+require 'distribution'
 rand_norm = Distribution::Normal.rng(0,1)
 
 # Generate the 5000x2 fixed effects design matrix
