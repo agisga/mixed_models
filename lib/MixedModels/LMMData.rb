@@ -16,7 +16,7 @@ class LMMData
 
   # Create an object which stores all the information required to fit a linear mixed model
   # as well as the results of the model fit, such as various matrices and some of their 
-  # products, the parameterization of the random effects covariance Cholesky factor as a Proc object,
+  # products, the parametrization of the random effects covariance Cholesky factor as a Proc object,
   # various parameter estimates, etc.
   #
   # === Arguments
@@ -62,7 +62,7 @@ class LMMData
     @ztwy = @ztw.dot wy
     wx, wy = nil, nil
 
-    @b = NMatrix.new([@q,1], dtype: :float64)      # conditional mode of random effects
+    @b = NMatrix.new([@q,1], dtype: :float64)      # conditional mean of random effects
     @beta = NMatrix.new([@p,1], dtype: :float64)   # conditional estimate of fixed-effects
     tmp_mat1 = @lambdat.dot @ztw
     tmp_mat2 = (tmp_mat1.dot tmp_mat1.transpose) + NMatrix.identity(@q)
@@ -70,7 +70,7 @@ class LMMData
     tmp_mat1, tmp_mat2 = nil, nil
     #@lambdat_ini = @lambdat                       # b/c it will be updated
     @mu = NMatrix.new([@n,1], dtype: :float64)     # conditional mean of response
-    @u = NMatrix.new([@q,1], dtype: :float64)      # conditional mode of spherical random effects
+    @u = NMatrix.new([@q,1], dtype: :float64)      # conditional mean of spherical random effects
   end
 
   # Attribute readers available for the following attributes:
@@ -102,12 +102,12 @@ class LMMData
   # These attributes will be typically changed during the evaluation of
   # the deviance function or the REML criterion.
   #
-  # * +b+       - conditional mode of random effects
+  # * +b+       - conditional mean of random effects
   # * +beta+    - conditional estimate of fixed-effects
   # * +l+       - lower triangular Cholesky factor of [lambda^T * z^T * w * z * lambda + identity]
   # * +lambdat+ - upper triangular Cholesky factor of the relative covariance matrix of the random effects.
   # * +mu+      - conditional mean of response
-  # * +u+       - conditional mode of spherical random effects
+  # * +u+       - conditional mean of spherical random effects
   #
   attr_accessor :lambdat, :b, :beta, :l, :lambdat, :mu, :u
 

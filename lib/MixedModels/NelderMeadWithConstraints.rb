@@ -63,14 +63,14 @@ module MixedModels
 
     # === Arguments
     #
-    #   * +start_point+   - an Array specifying the initial point for the minimization
-    #   * +lower_bound+   - an Array of lower bounds for each coordinate of the optimal solution 
-    #   * +upper_bound+   - an Array of upper bounds for each coordinate of the optimal solution 
-    #   * +epsilon+       - a small number specifying the thresholds for the convergence check: 
-    #                       +absolute_threshold+ = +epsilon+ and 
-    #                       +relative_threshold+ = 100 * +epsilon+
+    #   * +start_point+    - an Array specifying the initial point for the minimization
+    #   * +lower_bound+    - an Array of lower bounds for each coordinate of the optimal solution 
+    #   * +upper_bound+    - an Array of upper bounds for each coordinate of the optimal solution 
+    #   * +epsilon+        - a small number specifying the thresholds for the convergence check: 
+    #                        +absolute_threshold+ = +epsilon+ and 
+    #                        +relative_threshold+ = 100 * +epsilon+
     #   * +max_iterations+ - the maximum number of iterations
-    #   * +f+             - the objective function as a Proc object
+    #   * +f+              - the objective function as a Proc object
     #
     def initialize(start_point:, lower_bound: nil, upper_bound: nil, 
                    epsilon: 1e-6, max_iterations: 1e6, &f)

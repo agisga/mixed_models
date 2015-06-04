@@ -52,6 +52,8 @@ puts "beta estimate after deviance minimization: #{model_data.beta}"
 min_reml_fun = MixedModels::NelderMead.minimize(start_point: Array[1,0,1], lower_bound: Array[0,-Float::INFINITY,0], &reml_fun)
 puts "beta estimate after REML minimization: #{model_data.beta}"
 
+puts "Minimum deviance = #{min_dev_fun.f_minimum}"
 puts "Minimum deviance at theta = #{min_dev_fun.x_minimum}"
+puts "Minimum REML criterion = #{min_reml_fun.f_minimum}"
 puts "Minimum REML criterion at theta = #{min_reml_fun.x_minimum}"
 

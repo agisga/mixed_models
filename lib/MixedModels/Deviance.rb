@@ -1,6 +1,6 @@
 # Copyright (c) 2015 Alexej Gossmann 
 #
-# The following implementation is largely based on the paper Douglas Bates, Martin Maechler, 
+# The following implementation is based on the paper Douglas Bates, Martin Maechler, 
 # Ben Bolker, Steve Walker, "Fitting Linear Mixed - Effects Models using lme4" (arXiv:1406.5823v1 [stat.CO]. 2014),
 # and the corresponding R implementation in the package lme4pureR (https://github.com/lme4/lme4pureR).
 #
