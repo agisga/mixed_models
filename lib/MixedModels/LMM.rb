@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Alexej Gossmann 
  
 require 'nmatrix'
+
 # Linear mixed effects models.
 # The implementation is based on Bates et al. (2014)
 #
@@ -29,8 +30,8 @@ class LMM
   #                      function for the minimization; if false then the profiled deviance 
   #                      will be used; defaults to true
   # * +start_point+    - an Array specifying the initial parameter estimates for the minimization
-  # * +lower_bound+    - an Array of lower bounds for each coordinate of the optimal solution 
-  # * +upper_bound+    - an Array of upper bounds for each coordinate of the optimal solution 
+  # * +lower_bound+    - an optional Array of lower bounds for each coordinate of the optimal solution 
+  # * +upper_bound+    - an optional Array of upper bounds for each coordinate of the optimal solution 
   # * +epsilon+        - a small number specifying the thresholds for the convergence check 
   #                      of the optimization algorithm; see the respective documentation for 
   #                      more detail
@@ -44,7 +45,8 @@ class LMM
   #   "Fitting Linear Mixed - Effects Models using lme4". arXiv:1406.5823v1 [stat.CO]. 2014.
   #
   def initialize(x:, y:, zt:, lambdat:, weights: nil, offset: 0.0, reml: true, 
-                 epsilon: 1e-6, max_iterations: 1e6, &thfun)
+                 start_point:, lower_bound: nil, upper_bound: nil, epsilon: 1e-6, 
+                 max_iterations: 1e6, &thfun)
     @reml = reml
 
     # (1) Create the data structure in a LMMData object
@@ -65,24 +67,47 @@ class LMM
     @dev_optimal   = @optimization_result.f_minimum # function value at the optimal solution
   end
 
-  # Returns the estimated fixed effects coefficiants.
+  # An Array containing the estimated fixed effects coefficiants.
   # These estimates are conditional on the estimated covariance parameters.
   #
   def fixed_effects 
-    @model_data.beta
+    @model_data.beta.to_flat_a
   end
 
-  # Returns the estimated mean values of the random effects.
+  # An Array containing the estimated mean values of the random effects.
   # These are conditional estimates which depend on the input data.
   #
   def random_effects
-    @model_data.b
+    @model_data.b.to_flat_a
   end
 
-  # Returns the fitted response values, i.e. the estimated mean of the response
+  # An Array containing the fitted response values, i.e. the estimated mean of the response
   # (conditional on the estimates of the covariance parameters, the random effects,
   # and the fixed effects).
   def fitted_values
-    @model_data.mu
+    @model_data.mu.to_flat_a
+  end
+
+  # An Array containing the model residuals, which are defined as the difference between the
+  # response and the fitted values.
+  #
+  def residuals
+    (@model_data.y - @model_data.mu).to_flat_a
+  end
+  
+  # Sum of squared residuals
+  #
+  def sse
+    s = 0.0
+    self.residuals.each { |r| s += r**2 }
+    return s
+  end
+
+  # Mean squared error, defined as the mean
+  # of the squares of the differences between the response
+  # and the fitted values.
+  #
+  def mse
+    self.sse / @model_data.n
   end
 end
