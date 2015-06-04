@@ -4,17 +4,17 @@ require 'distribution'
 rand_norm = Distribution::Normal.rng(0,1)
 
 # Generate the 500x2 fixed effects design matrix
-x_array = Array.new(1000) { 1 }
+x_array = Array.new(100) { 1 }
 x_array.each_index { |i| x_array[i]=(i+1)/2 if (i+1)%2==0 } 
-x = NMatrix.new([500,2], x_array, dtype: :float64)
+x = NMatrix.new([50,2], x_array, dtype: :float64)
 
 # Fixed effects coefficient vector
-beta = NMatrix.new([2,1], [2,3], dtype: :float64)
+beta = NMatrix.new([2,1], [1,1], dtype: :float64)
 
 # Generate the mixed effects model matrix
 # (Assume a group structure with five groups of equal size)
-grp_mat = NMatrix.zeros([500,5], dtype: :float64)
-[0,100,200,300,400].each { |i| grp_mat[i...(i+100), i/100] = 1.0 }
+grp_mat = NMatrix.zeros([50,5], dtype: :float64)
+[0,10,20,30,40].each { |i| grp_mat[i...(i+10), i/10] = 1.0 }
 # (Create matrix for random intercept and slope)
 z = grp_mat.khatri_rao_rows x
 
@@ -27,8 +27,8 @@ b = NMatrix.new([10,1], b_array, dtype: :float64)
 
 # Generate the random residuals vector
 # Values generated from the standard Normal distribution
-epsilon_array = Array.new(500) { rand_norm.call } 
-epsilon = NMatrix.new([500,1], epsilon_array, dtype: :float64)
+epsilon_array = Array.new(50) { rand_norm.call } 
+epsilon = NMatrix.new([50,1], epsilon_array, dtype: :float64)
  
 # Generate the response vector
 y = (x.dot beta) + (z.dot b) + epsilon
@@ -46,7 +46,17 @@ model_fit = LMM.new(x: x, y: y, zt: z.transpose, lambdat: lambdat,
                     &parametrization) 
 
 # Print some results
-puts "Estimates of the fixed effects: #{model_fit.fixed_effects}"
-puts "Optimal theta: #{model_fit.theta_optimal}"
-puts "REML criterion at the optimal solution: #{model_fit.dev_optimal}"
-puts "Mean squared error: #{model_fit.mse}"
+puts "(1) Model fit"
+puts "Optimal theta: \t#{model_fit.theta_optimal}"
+puts "REML criterion: \t#{model_fit.dev_optimal}"
+
+puts "(2) Fixed effects"
+puts "Coefficient estimates: \t#{model_fit.fix_ef}"
+puts "Mean squared error: \t#{model_fit.mse}"
+
+puts "(3) Random effects"
+sd1 = Math::sqrt(model_fit.sigma_mat[0,0])
+puts "Random intercept sd: \t#{sd1}"
+sd2 = Math::sqrt(model_fit.sigma_mat[1,1])
+puts "Random slope sd: \t#{sd2}"
+puts "Correlation of random intercept and slope: \t#{model_fit.sigma_mat[0,1] / (sd1*sd2)}"

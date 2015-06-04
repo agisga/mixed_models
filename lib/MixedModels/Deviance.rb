@@ -38,8 +38,8 @@ module MixedModels
       cu = d.l.solve(d.lambdat.dot d.ztwy) 
       #rzx = d.l.solve(d.lambdat.dot d.ztwx)
       rzx = d.l.inverse.dot(d.lambdat.dot d.ztwx) #TODO: make a solve method for this
-      rxtrx = d.xtwx - (rzx.transpose.dot rzx)
-      d.beta = rxtrx.solve(d.xtwy - (rzx.transpose.dot cu))
+      d.rxtrx = d.xtwx - (rzx.transpose.dot rzx)
+      d.beta = d.rxtrx.solve(d.xtwy - (rzx.transpose.dot cu))
       d.u = d.l.transpose.solve(cu - (rzx.dot d.beta))
       d.b = d.lambdat.transpose.dot d.u
       
@@ -48,10 +48,10 @@ module MixedModels
       wtres = d.sqrtw.dot (d.y-d.mu)
 
       # (4) evaluate the profiled deviance or the REML criterion
-      pwrss = (wtres.norm2)**2.0 + (d.u.norm2)**2.0 # penalized weighted residual sum-of-squares
+      d.pwrss = (wtres.norm2)**2.0 + (d.u.norm2)**2.0 # penalized weighted residual sum-of-squares
       logdet = 2.0 * Math::log(d.l.det.abs) 
-      logdet += Math::log(rxtrx.det.abs) if reml
-      logdet + df * (1.0 + Math::log(2.0 * Math::PI * pwrss) - Math::log(df))
+      logdet += Math::log(d.rxtrx.det.abs) if reml
+      logdet + df * (1.0 + Math::log(2.0 * Math::PI * d.pwrss) - Math::log(df))
     end
   end
 end

@@ -53,13 +53,13 @@ class LMMData
                NMatrix.diagonal(weights.map { |w| Math::sqrt(w) }, dtype: :float64)
              end
     
-    wx = @sqrtw.dot @x
-    wy = @sqrtw.dot @y
-    @ztw = @zt.dot @sqrtw
-    @xtwx = wx.transpose.dot wx
-    @xtwy = wx.transpose.dot wy
-    @ztwx = @ztw.dot wx
-    @ztwy = @ztw.dot wy
+    wx     = @sqrtw.dot @x
+    wy     = @sqrtw.dot @y
+    @ztw   = @zt.dot @sqrtw
+    @xtwx  = wx.transpose.dot wx
+    @xtwy  = wx.transpose.dot wy
+    @ztwx  = @ztw.dot wx
+    @ztwy  = @ztw.dot wy
     wx, wy = nil, nil
 
     @b = NMatrix.new([@q,1], dtype: :float64)      # conditional mean of random effects
@@ -71,6 +71,8 @@ class LMMData
     #@lambdat_ini = @lambdat                       # b/c it will be updated
     @mu = NMatrix.new([@n,1], dtype: :float64)     # conditional mean of response
     @u = NMatrix.new([@q,1], dtype: :float64)      # conditional mean of spherical random effects
+    @pwrss = Float::INFINITY                       # penalized weighted residual sum of squares
+    @rxtrx = NMatrix.new(xtwx.shape, dtype: :float64)
   end
 
   # Attribute readers available for the following attributes:
@@ -108,7 +110,8 @@ class LMMData
   # * +lambdat+ - upper triangular Cholesky factor of the relative covariance matrix of the random effects.
   # * +mu+      - conditional mean of response
   # * +u+       - conditional mean of spherical random effects
+  # * +pwrss+   - penalized weighted residual sum of squares
   #
-  attr_accessor :lambdat, :b, :beta, :l, :lambdat, :mu, :u
+  attr_accessor :lambdat, :b, :beta, :l, :lambdat, :mu, :u, :pwrss, :rxtrx
 
 end
