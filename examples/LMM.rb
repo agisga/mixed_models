@@ -34,7 +34,7 @@ epsilon = NMatrix.new([50,1], epsilon_array, dtype: :float64)
 # Generate the response vector
 y = (x.dot beta) + (z.dot b) + epsilon
 
-# Set up the initial estimate of the covariance matrix 
+# Set up the covariance parameters
 lambdat = NMatrix.identity(10, dtype: :float64)
 parametrization = Proc.new do |th| 
   diag_blocks = Array.new(5) { NMatrix.new([2,2], [th[0],th[1],0,th[2]], dtype: :float64) }
