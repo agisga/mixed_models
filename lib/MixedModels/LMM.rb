@@ -13,7 +13,7 @@ require 'nmatrix'
 class LMM
 
   attr_reader :reml, :theta_optimal, :dev_optimal, :dev_fun, :optimization_result, :model_data,
-              :sigma2, :ran_ef_cov_mat, :sse, :mse, :sigma_mat
+              :sigma2, :sigma_mat, :fix_ef_cov_mat, :ran_ef_cov_mat, :sse, :mse
 
   # Fit and store a linear mixed effects model according to the input from the user.
   # Parameter estimates are obtained by the method described in Bates et. al. (2014).
@@ -83,8 +83,9 @@ class LMM
     # mean squared error, defined as the mean of the squares of the differences 
     # between the response and the fitted values.
     @mse = self.sse / @model_data.n
-    # scale parameter of the covariance (the residuals consitional on the random 
-    # effects have variances "sigma2*weights^(-1)")
+    # scale parameter of the covariance (the residuals conditional on the random 
+    # effects have variances "sigma2*weights^(-1)"; if all weights are ones then 
+    # sigma2 is an estimate of the residual variance)
     @sigma2 = if reml then
                @model_data.pwrss / (@model_data.n - @model_data.p)
              else
