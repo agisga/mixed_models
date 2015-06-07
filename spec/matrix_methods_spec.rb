@@ -33,6 +33,19 @@ describe NMatrix do
     end
   end
 
+  [:float32, :float64].each do |dtype|
+    context "#matrix_valued_solve #{dtype} dense" do
+      it "Solve a matrix-valued linear system A * X = B" do
+        a = NMatrix.random([10,10], dtype: dtype)
+        m = rand(1..10)
+        b = NMatrix.random([10,m], dtype: dtype)
+        x = a.matrix_valued_solve(b)
+        r = a.dot(x) - b
+        expect(r.max(1).max).to be_within(1e-6).of(0.0)
+      end
+    end
+  end
+
   ALL_DTYPES.each do |dtype|
     [:dense, :yale, :list].each do |stype|
       context "#block_diagonal #{dtype} #{stype}" do
