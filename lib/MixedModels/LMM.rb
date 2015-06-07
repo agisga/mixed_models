@@ -97,10 +97,9 @@ class LMM
 
     # variance-covariance matrix of the random effects estimates, conditional on the
     # input data, as given in equation (58) in Bates et. al. (2014).
-    # TODO: this can be done more efficiently because l is a lower-triangular matrix
-    linv = @model_data.l.inverse
-    v = linv.transpose.dot linv
-    v = v * sigma2
+    rhs = NMatrix.identity(@model_data.q, dtype: :float64) * sigma2
+    u = @model_data.l.triangular_solve(:lower, rhs)
+    v = @model_data.l.transpose.triangular_solve(:upper, u)
     @ran_ef_cov_mat = (@model_data.lambdat.transpose.dot v).dot @model_data.lambdat
 
     # variance-covariance matrix of the fixed effects estimates, conditional on the

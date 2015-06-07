@@ -46,6 +46,26 @@ describe NMatrix do
     end
   end
 
+  [:float32, :float64].each do |dtype|
+    context "#triangular_solve #{dtype} dense" do
+      it "Solve a linear system A * x = b with a lower triangular A" do
+        a = NMatrix.random([10,10], dtype: dtype).tril
+        b = NMatrix.random([10,1], dtype: dtype)
+        x = a.triangular_solve(:lower, b)
+        r = a.dot(x) - b
+        expect(r.max).to be_within(1e-6).of(0.0)
+      end
+
+      it "Solve a linear system A * x = b with an upper triangular A" do
+        a = NMatrix.random([10,10], dtype: dtype).triu
+        b = NMatrix.random([10,1], dtype: dtype)
+        x = a.triangular_solve(:upper, b)
+        r = a.dot(x) - b
+        expect(r.max).to be_within(1e-6).of(0.0)
+      end
+    end
+  end
+
   ALL_DTYPES.each do |dtype|
     [:dense, :yale, :list].each do |stype|
       context "#block_diagonal #{dtype} #{stype}" do

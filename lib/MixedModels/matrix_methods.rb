@@ -73,6 +73,32 @@ class NMatrix
     return rhs_mat_t.transpose
   end
 
+  # Solve a linear system A * x = b, where A is a lower triangular matrix, 
+  # x and b are vectors. 
+  #
+  # === Arguments
+  #
+  # * +uplo+ - flag indicating whether the matrix is lower or upper triangular;
+  #            possible values are :lower and :upper
+  # * +rhs+  - the right hand side, a nx1 NMatrix object
+  #
+  # === Usage
+  #
+  # a = NMatrix.new(3, [4, 0, 0, -2, 2, 0, -4, -2, -0.5], dtype: :float64)
+  # b = NMatrix.new([3,1], [-1, 17, -9], dtype: :float64)
+  # x = a.triangular_solve(:lower, b)
+  # a.dot x # => [ [-1.0]   [17.0]   [-9.0] ]
+  #
+  def triangular_solve(uplo, rhs)
+    raise(ArgumentError, "uplo should be :lower or :upper") unless uplo == :lower or uplo == :upper
+    b = rhs.clone
+    a = self.clone
+    NMatrix::BLAS::cblas_trsm(:row, :right, uplo, :transpose, :nounit, 
+                              b.shape[1], b.shape[0], 1.0, a, a.shape[0],
+                              b, b.shape[0])
+    return b
+  end
+
   class << self
 
     # Generate a block-diagonal NMatrix from the supplied 2D square matrices.

@@ -34,13 +34,13 @@ module MixedModels
       tmp_mat1, tmp_mat2 = nil, nil
       
       # (2) solve the normal equations to get estimates +beta+, +u+ and +b+
-      # TODO: use a triangular solve method where appropriate
-      cu = d.l.solve(d.lambdat.dot d.ztwy) 
-      rzx = d.l.matrix_valued_solve(d.lambdat.dot d.ztwx)
-      d.rxtrx = d.xtwx - (rzx.transpose.dot rzx)
-      d.beta = d.rxtrx.solve(d.xtwy - (rzx.transpose.dot cu))
-      d.u = d.l.transpose.solve(cu - (rzx.dot d.beta))
-      d.b = d.lambdat.transpose.dot d.u
+      # TODO: replace matrix_valued_solve by lower_triangular_matrix_valued_solve
+      cu = d.l.triangular_solve(:lower, d.lambdat.dot(d.ztwy))
+      rzx = d.l.matrix_valued_solve(d.lambdat.dot(d.ztwx))
+      d.rxtrx = d.xtwx - (rzx.transpose.dot(rzx))
+      d.beta = d.rxtrx.solve(d.xtwy - rzx.transpose.dot(cu))
+      d.u = d.l.transpose.triangular_solve(:upper, (cu - rzx.dot(d.beta)))
+      d.b = d.lambdat.transpose.dot(d.u)
       
       # (3) update the predictor of the response and the weighted residuals
       d.mu = (d.x.dot d.beta) + (d.zt.transpose.dot d.b) + d.offset
