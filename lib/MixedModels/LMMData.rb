@@ -111,6 +111,7 @@ class LMMData
   # * +mu+      - conditional mean of response
   # * +u+       - conditional mean of spherical random effects
   # * +pwrss+   - penalized weighted residual sum of squares
+  # * +rxtrx+   - cross-product of fixed effect Cholesky factor
   #
   attr_accessor :lambdat, :b, :beta, :l, :lambdat, :mu, :u, :pwrss, :rxtrx
 

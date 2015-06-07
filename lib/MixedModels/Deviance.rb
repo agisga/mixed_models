@@ -37,7 +37,6 @@ module MixedModels
       # TODO: use a triangular solve method where appropriate
       cu = d.l.solve(d.lambdat.dot d.ztwy) 
       rzx = d.l.matrix_valued_solve(d.lambdat.dot d.ztwx)
-      #rzx = d.l.inverse.dot(d.lambdat.dot d.ztwx) #TODO: make a solve method for this
       d.rxtrx = d.xtwx - (rzx.transpose.dot rzx)
       d.beta = d.rxtrx.solve(d.xtwy - (rzx.transpose.dot cu))
       d.u = d.l.transpose.solve(cu - (rzx.dot d.beta))

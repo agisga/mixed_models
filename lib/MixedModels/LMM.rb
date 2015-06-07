@@ -97,6 +97,7 @@ class LMM
 
     # variance-covariance matrix of the random effects estimates, conditional on the
     # input data, as given in equation (58) in Bates et. al. (2014).
+    # TODO: this can be done more efficiently because l is a lower-triangular matrix
     linv = @model_data.l.inverse
     v = linv.transpose.dot linv
     v = v * sigma2
