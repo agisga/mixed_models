@@ -53,6 +53,26 @@ class NMatrix
     return khrao_prod
   end
 
+  # Solve a matrix-valued linear system A * X = B, where A is a nxn matrix, B and X are nxp matrices.
+  #
+  # === Arguments
+  #
+  # * +rhs_mat+ - the 2D matrix on the right hand side of the linear system
+  #
+  # === Usage
+  #
+  # a = NMatrix.random([10,10], dtype: :float64)
+  # b = NMatrix.random([10,5], dtype: :float64)
+  # x = a.solve(b)
+  #
+  def matrix_valued_solve(rhs_mat)
+    rhs_mat_t = rhs_mat.transpose
+    lhs_mat = self.clone
+    NMatrix::LAPACK::clapack_gesv(:row, lhs_mat.shape[0], rhs_mat.shape[1], 
+                                  lhs_mat, lhs_mat.shape[0], rhs_mat_t, rhs_mat.shape[0])
+    return rhs_mat_t.transpose
+  end
+
   class << self
 
     # Generate a block-diagonal NMatrix from the supplied 2D square matrices.
