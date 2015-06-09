@@ -8,7 +8,7 @@ describe NMatrix do
   ALL_DTYPES.each do |dtype|
     [:dense, :yale].each do |stype|
       context "#kron_prod_1D #{dtype} #{stype}" do
-        it "Compute the Kronecker product of two [1,n] NMatrix objects" do
+        it "computes the Kronecker product of two [1,n] NMatrix objects" do
           a = NMatrix.new([1,3], [0,1,0], dtype: dtype, stype: stype)
           b = NMatrix.new([1,2], [3,2], dtype: dtype, stype: stype)
           m = NMatrix.new([1,6], [0, 0, 3, 2, 0, 0], dtype: dtype, stype: stype)
@@ -21,7 +21,7 @@ describe NMatrix do
   ALL_DTYPES.each do |dtype|
     [:dense, :yale].each do |stype|
       context "#khatri_rao_rows #{dtype} #{stype}" do
-        it "Compute the simplified Khatri-Rao product of two NMatrix objects" do
+        it "computes the simplified Khatri-Rao product of two NMatrix objects" do
           a = NMatrix.new([3,2], [1,2,1,2,1,2], dtype: dtype, stype: stype)
           b = NMatrix.new([3,2], (1..6).to_a, dtype: dtype, stype: stype)
           m = NMatrix.new([3,4], [1, 2,  2,  4,
@@ -35,7 +35,7 @@ describe NMatrix do
 
   [:float32, :float64].each do |dtype|
     context "#matrix_valued_solve #{dtype} dense" do
-      it "Solve a matrix-valued linear system A * X = B" do
+      it "solves a matrix-valued linear system A * X = B" do
         a = NMatrix.random([10,10], dtype: dtype)
         m = rand(1..10)
         b = NMatrix.random([10,m], dtype: dtype)
@@ -48,7 +48,7 @@ describe NMatrix do
 
   [:float32, :float64].each do |dtype|
     context "#triangular_solve #{dtype} dense" do
-      it "Solve a linear system A * x = b with a lower triangular A" do
+      it "solves a linear system A * x = b with a lower triangular A" do
         a = NMatrix.random([10,10], dtype: dtype).tril
         b = NMatrix.random([10,1], dtype: dtype)
         x = a.triangular_solve(:lower, b)
@@ -56,7 +56,7 @@ describe NMatrix do
         expect(r.max).to be_within(1e-6).of(0.0)
       end
 
-      it "Solve a linear system A * x = b with an upper triangular A" do
+      it "solves a linear system A * x = b with an upper triangular A" do
         a = NMatrix.random([10,10], dtype: dtype).triu
         b = NMatrix.random([10,1], dtype: dtype)
         x = a.triangular_solve(:upper, b)
@@ -69,7 +69,7 @@ describe NMatrix do
   ALL_DTYPES.each do |dtype|
     [:dense, :yale, :list].each do |stype|
       context "#block_diagonal #{dtype} #{stype}" do
-        it "block_diagonal() creates a block-diagonal NMatrix" do
+        it "creates a block-diagonal NMatrix" do
           a = NMatrix.new([2,2],[1,2,
                                  3,4])
           b = NMatrix.new([1,1],[123.0])
