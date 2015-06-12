@@ -1,7 +1,7 @@
 require 'MixedModels'
 
 RSpec.describe MixedModels do
-  context "mk_ran_ef_model_matrix" do
+  context "with mk_ran_ef_model_matrix" do
     it "generates a random effects model matrix using mk_ran_ef_model_matrix with one group of random effects" do
       x1  = NMatrix.new([6,2], [1,-1,1,1,1,-1,1,1,1,-1,1,1], dtype: :float64)
       x   = Array[x1]
@@ -45,7 +45,7 @@ RSpec.describe MixedModels do
     end
   end
 
-  context "mk_ran_ef_cov_fun" do
+  context "with mk_ran_ef_cov_fun" do
     it "generates a Proc which parametrizes the random effects covariance matrix as a function of theta" do
       mapping = MixedModels::mk_ran_ef_cov_fun([2], [3])
       expect(mapping.call([1,2,3])).to eq(NMatrix.new([6,6], [1, 3, 0, 0, 0, 0,
