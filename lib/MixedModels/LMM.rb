@@ -124,6 +124,13 @@ class LMM
 
   # Fit and store a linear mixed effects model from data supplied as Daru::DataFrame.
   # Parameter estimates are obtained via #initialize.
+  # The fixed effects are specified as an Array, where +:intercept+ specifies the inclusion
+  # of an intercept term into the model (it is not included automatically). The random effects are
+  # specified as an Array of Arrays, where the variables in each sub-Array correspond to a common 
+  # grouping factor (given in the Array +grouping+) and are modeled as correlated; as for the fixed effects,
+  # +:intercept+ can be used to denote a random intercept term. 
+  #
+  # Currently, interaction effects and nested random effects cannot be specified with this interface.
   #
   # === Arguments
   #
@@ -152,7 +159,7 @@ class LMM
                     epsilon: 1e-6, max_iterations: 1e6)
     raise(ArgumentError, "data should be a Daru::DataFrame") unless data.is_a?(Daru::DataFrame)
 
-    n = data.rows
+    n = data.size
     y = NMatrix.new([n,1], data[response].to_a, dtype: :float64)
 
     # add an intercept column, so the intercept will be used whenever specified
@@ -160,9 +167,7 @@ class LMM
 
     # construct the fixed effects design matrix
     x_frame = data[*fixed_effects]
-    x_array = Array.new 
-    0.upto(n-1) { |i| x_array.concat(x_frame.row[i].to_a) }
-    x = NMatrix.new([n,x_frame.cols], x_array, dtype: :float64)
+    x = x_frame.to_nm
 
     # construct the random effects model matrix and covariance function 
     num_groups = grouping.length
@@ -173,11 +178,9 @@ class LMM
     num_grp_levels = Array.new
     0.upto(num_groups-1) do |i|
       xi_frame = data[*random_effects[i]]
-      xi_array = Array.new 
-      0.upto(n-1) { |i| xi_array.concat(xi_frame.row[i].to_a) }
-      ran_ef_raw_mat[i] = NMatrix.new([n,xi_frame.cols], xi_array, dtype: :float64)
+      ran_ef_raw_mat[i] = xi_frame.to_nm
       ran_ef_grp[i] = data[grouping[i]].to_a
-      num_ran_ef[i] = xi_frame.cols
+      num_ran_ef[i] = ran_ef_raw_mat[i].shape[1]
       num_grp_levels[i] = ran_ef_grp[i].uniq.length
     end
     z     = MixedModels::mk_ran_ef_model_matrix(ran_ef_raw_mat, ran_ef_grp)
@@ -185,16 +188,17 @@ class LMM
 
     # define the starting point for the optimization (if it's nil),
     # such that random effects are independent with variances equal to one
+    q = num_ran_ef.sum
     if start_point.nil? then
-      tmp1 = Array.new(num_ran_ef.sum) {1.0}
-      tmp2 = Array.new(num_ran_ef.sum) {0.0}
+      tmp1 = Array.new(q) {1.0}
+      tmp2 = Array.new(q*(q-1)/2) {0.0}
       start_point = tmp1 + tmp2
     end
     lambdat = thfun.call(start_point)
 
     # set the lower bound on the variance-covariance parameters
-    tmp1 = Array.new(num_ran_ef.sum) {0.0}
-    tmp2 = Array.new(num_ran_ef.sum) {-Float::INFINITY}
+    tmp1 = Array.new(q) {0.0}
+    tmp2 = Array.new(q*(q-1)/2) {-Float::INFINITY}
     lower_bound = tmp1 + tmp2
 
     # fit the model
