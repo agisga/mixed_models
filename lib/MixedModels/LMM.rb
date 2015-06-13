@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Alexej Gossmann 
  
 require 'nmatrix'
+require 'daru'
 
 # Linear mixed effects models.
 # The implementation is based on Bates et al. (2014)
@@ -119,6 +120,87 @@ class LMM
     ran_ef_names = (0...@model_data.b.shape[0]).map { |i| "z" + i.to_s }
     ran_ef_names.each_with_index { |name, i| @ran_ef[name] = @model_data.b[i] }
     # TODO: store more info in ran_ef, such as p-values on 95%CI
+  end
+
+  # Fit and store a linear mixed effects model from data supplied as Daru::DataFrame.
+  # Parameter estimates are obtained via #initialize.
+  #
+  # === Arguments
+  #
+  # * +response+       - name of the response variable in +data+
+  # * +fixed_effects+  - names of the fixed effects in +data+, given as an Array
+  # * +random_effects+ - names of the random effects in +data+, given as an Array of Arrays;
+  #                      where the variables in each Array share a common grouping structure,
+  #                      and the corresponding random effects are modeled as correlated.
+  # * +grouping+       - an Array of the names of the variables in +data+, which determine the
+  #                      grouping structures for +random_effects+
+  # * +data+           - a Daru::DataFrame object, containing the response, fixed and random effects,
+  #                      as well as the grouping variables
+  # * +weights+        - optional Array of prior weights
+  # * +offset+         - an optional vector of offset terms which are known a priori; a nx1 NMatrix
+  # * +reml+           - if true than the profiled REML criterion will be used as the objective
+  #                      function for the minimization; if false then the profiled deviance 
+  #                      will be used; defaults to true
+  # * +start_point+    - an optional Array specifying the initial parameter estimates for the minimization
+  # * +epsilon+        - an optional  small number specifying the thresholds for the convergence check 
+  #                      of the optimization algorithm; see the respective documentation for 
+  #                      more detail
+  # * +max_iterations+ - optional, the maximum number of iterations for the optimization algorithm
+  #
+  def LMM.from_daru(response:, fixed_effects:, random_effects:, grouping:, data:,
+                    weights: nil, offset: 0.0, reml: true, start_point: nil,
+                    epsilon: 1e-6, max_iterations: 1e6)
+    raise(ArgumentError, "data should be a Daru::DataFrame") unless data.is_a?(Daru::DataFrame)
+
+    n = data.rows
+    y = NMatrix.new([n,1], data[response].to_a, dtype: :float64)
+
+    # add an intercept column, so the intercept will be used whenever specified
+    data[:intercept] = Array.new(n) {1.0}
+
+    # construct the fixed effects design matrix
+    x_frame = data[*fixed_effects]
+    x_array = Array.new 
+    0.upto(n-1) { |i| x_array.concat(x_frame.row[i].to_a) }
+    x = NMatrix.new([n,x_frame.cols], x_array, dtype: :float64)
+
+    # construct the random effects model matrix and covariance function 
+    num_groups = grouping.length
+    raise(ArgumentError, "Length of +random_effects+ mismatches length of +grouping+") unless random_effects.length == num_groups
+    ran_ef_raw_mat = Array.new
+    ran_ef_grp     = Array.new
+    num_ran_ef     = Array.new
+    num_grp_levels = Array.new
+    0.upto(num_groups-1) do |i|
+      xi_frame = data[*random_effects[i]]
+      xi_array = Array.new 
+      0.upto(n-1) { |i| xi_array.concat(xi_frame.row[i].to_a) }
+      ran_ef_raw_mat[i] = NMatrix.new([n,xi_frame.cols], xi_array, dtype: :float64)
+      ran_ef_grp[i] = data[grouping[i]].to_a
+      num_ran_ef[i] = xi_frame.cols
+      num_grp_levels[i] = ran_ef_grp[i].uniq.length
+    end
+    z     = MixedModels::mk_ran_ef_model_matrix(ran_ef_raw_mat, ran_ef_grp)
+    thfun = MixedModels::mk_ran_ef_cov_fun(num_ran_ef, num_grp_levels)
+
+    # define the starting point for the optimization (if it's nil),
+    # such that random effects are independent with variances equal to one
+    if start_point.nil? then
+      tmp1 = Array.new(num_ran_ef.sum) {1.0}
+      tmp2 = Array.new(num_ran_ef.sum) {0.0}
+      start_point = tmp1 + tmp2
+    end
+    lambdat = thfun.call(start_point)
+
+    # set the lower bound on the variance-covariance parameters
+    tmp1 = Array.new(num_ran_ef.sum) {0.0}
+    tmp2 = Array.new(num_ran_ef.sum) {-Float::INFINITY}
+    lower_bound = tmp1 + tmp2
+
+    # fit the model
+    lmmfit = LMM.new(x: x, y: y, zt: z.transpose, lambdat: lambdat, weights: weights, offset: offset, 
+                     reml: reml, start_point: start_point, lower_bound: lower_bound, epsilon: epsilon, 
+                     max_iterations: max_iterations, &thfun)
   end
 
   # An Array containing the fitted response values, i.e. the estimated mean of the response
