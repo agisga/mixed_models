@@ -27,13 +27,17 @@ class LMM
   # * +lambdat+        - upper triangular Cholesky factor of the relative 
   #                      covariance matrix of the random effects; a dense NMatrix
   # * +weights+        - optional Array of prior weights
-  # * +offset+         - an optional vector of offset terms which are known a priori; a nx1 NMatrix
+  # * +offset+         - an optional vector of offset terms which are known 
+  #                      a priori; a nx1 NMatrix
   # * +reml+           - if true than the profiled REML criterion will be used as the objective
   #                      function for the minimization; if false then the profiled deviance 
   #                      will be used; defaults to true
-  # * +start_point+    - an Array specifying the initial parameter estimates for the minimization
-  # * +lower_bound+    - an optional Array of lower bounds for each coordinate of the optimal solution 
-  # * +upper_bound+    - an optional Array of upper bounds for each coordinate of the optimal solution 
+  # * +start_point+    - an Array specifying the initial parameter estimates for the 
+  #                      minimization
+  # * +lower_bound+    - an optional Array of lower bounds for each coordinate of the optimal 
+  #                      solution 
+  # * +upper_bound+    - an optional Array of upper bounds for each coordinate of the optimal 
+  #                      solution 
   # * +epsilon+        - a small number specifying the thresholds for the convergence check 
   #                      of the optimization algorithm; see the respective documentation for 
   #                      more detail
@@ -123,36 +127,48 @@ class LMM
   end
 
   # Fit and store a linear mixed effects model from data supplied as Daru::DataFrame.
-  # Parameter estimates are obtained via #initialize.
+  # Parameter estimates are obtained via LMM#initialize.
   # The fixed effects are specified as an Array, where +:intercept+ specifies the inclusion
-  # of an intercept term into the model (it is not included automatically). The random effects are
-  # specified as an Array of Arrays, where the variables in each sub-Array correspond to a common 
-  # grouping factor (given in the Array +grouping+) and are modeled as correlated; as for the fixed effects,
-  # +:intercept+ can be used to denote a random intercept term. 
+  # of an intercept term into the model (it is not included automatically). The random effects
+  # are specified as an Array of Arrays, where the variables in each sub-Array correspond to 
+  # a common grouping factor (given in the Array +grouping+) and are modeled as correlated; as
+  # for the fixed effects, +:intercept+ can be used to denote a random intercept term. 
+  # An interaction effects can be included as an Array of length two, containing the 
+  # respective variable names.
   #
-  # Currently, interaction effects and nested random effects cannot be specified with this interface.
+  # All non-numeric vectors in the data frame are considered to be categorical variables
+  # and treated accordingly.
+  #
+  # Currently, nested random effects cannot be specified with this interface.
   #
   # === Arguments
   #
   # * +response+       - name of the response variable in +data+
-  # * +fixed_effects+  - names of the fixed effects in +data+, given as an Array
+  # * +fixed_effects+  - names of the fixed effects in +data+, given as an Array. An 
+  #                      interaction effect can be specified as Array of length two.
+  #                      An intercept term can be denoted as +:intercept+
   # * +random_effects+ - names of the random effects in +data+, given as an Array of Arrays;
-  #                      where the variables in each Array share a common grouping structure,
-  #                      and the corresponding random effects are modeled as correlated.
+  #                      where the variables in each (inner) Array share a common grouping 
+  #                      structure, and the corresponding random effects are modeled as 
+  #                      correlated. An interaction effect can be specified as Array of 
+  #                      length two. An intercept term can be denoted as +:intercept+
   # * +grouping+       - an Array of the names of the variables in +data+, which determine the
   #                      grouping structures for +random_effects+
-  # * +data+           - a Daru::DataFrame object, containing the response, fixed and random effects,
-  #                      as well as the grouping variables
+  # * +data+           - a Daru::DataFrame object, containing the response, fixed and random 
+  #                      effects, as well as the grouping variables
   # * +weights+        - optional Array of prior weights
-  # * +offset+         - an optional vector of offset terms which are known a priori; a nx1 NMatrix
+  # * +offset+         - an optional vector of offset terms which are known 
+  #                      a priori; a nx1 NMatrix
   # * +reml+           - if true than the profiled REML criterion will be used as the objective
   #                      function for the minimization; if false then the profiled deviance 
   #                      will be used; defaults to true
-  # * +start_point+    - an optional Array specifying the initial parameter estimates for the minimization
-  # * +epsilon+        - an optional  small number specifying the thresholds for the convergence check 
-  #                      of the optimization algorithm; see the respective documentation for 
-  #                      more detail
-  # * +max_iterations+ - optional, the maximum number of iterations for the optimization algorithm
+  # * +start_point+    - an optional Array specifying the initial parameter estimates for the 
+  #                      minimization
+  # * +epsilon+        - an optional  small number specifying the thresholds for the 
+  #                      convergence check of the optimization algorithm; see the respective 
+  #                      documentation for more detail
+  # * +max_iterations+ - optional, the maximum number of iterations for the optimization 
+  #                      algorithm
   #
   def LMM.from_daru(response:, fixed_effects:, random_effects:, grouping:, data:,
                     weights: nil, offset: 0.0, reml: true, start_point: nil,
@@ -160,7 +176,24 @@ class LMM
     raise(ArgumentError, "data should be a Daru::DataFrame") unless data.is_a?(Daru::DataFrame)
 
     n = data.size
+
+    # response vector
     y = NMatrix.new([n,1], data[response].to_a, dtype: :float64)
+
+    # deal with categorical (non-numeric) variables
+    no_intercept = false if fixed_effects.include? :intercept 
+    new_names = data.replace_categorical_vectors_with_indicators!(for_model_without_intercept: no_intercept)
+    categorical_names = new_names.keys
+    categorical_names.each do |name|
+      # replace the categorical variable name in (non-interaction) fixed_effects
+      ind = fixed_effects.find_index(name)
+      fixed_effects[ind..ind] = new_names[name] unless ind.nil?
+      # replace the categorical variable name in (non-interaction) random_effects 
+      random_effects.each_index do |i|
+        ind = random_effects[i].find_index(name)
+        random_effects[i][ind..ind] = new_names[name] unless ind.nil?
+      end
+    end
 
     # add an intercept column, so the intercept will be used whenever specified
     data[:intercept] = Array.new(n) {1.0}
@@ -202,9 +235,12 @@ class LMM
     lower_bound = tmp1 + tmp2
 
     # fit the model
-    lmmfit = LMM.new(x: x, y: y, zt: z.transpose, lambdat: lambdat, weights: weights, offset: offset, 
-                     reml: reml, start_point: start_point, lower_bound: lower_bound, epsilon: epsilon, 
+    lmmfit = LMM.new(x: x, y: y, zt: z.transpose, lambdat: lambdat, 
+                     weights: weights, offset: offset, 
+                     reml: reml, start_point: start_point, 
+                     lower_bound: lower_bound, epsilon: epsilon, 
                      max_iterations: max_iterations, &thfun)
+    return lmmfit
   end
 
   # An Array containing the fitted response values, i.e. the estimated mean of the response

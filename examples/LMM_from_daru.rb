@@ -1,5 +1,9 @@
 require 'MixedModels'
 
+#########################################################################
+# Model with numerical variables only; random intercept and slope #######
+#########################################################################
+
 # Fixed effects coefficient vector
 beta = NMatrix.new([2,1], [1,1], dtype: :float64)
 
@@ -35,6 +39,10 @@ model_fit = LMM.from_daru(response: :y, fixed_effects: [:intercept, :x],
                           data: df)
 
 # Print some results
+puts "-------------------------------------------"
+puts "Model with numerical variables only; random intercept and slope"
+puts "-------------------------------------------"
+
 puts "(1) Model fit"
 puts "Optimal theta: \t#{model_fit.theta_optimal}"
 puts "REML criterion: \t#{model_fit.dev_optimal}"
@@ -52,4 +60,30 @@ puts "Correlation of random intercept and slope: \t#{model_fit.sigma_mat[0,1] / 
 
 puts "(4) Residuals"
 puts "Variance: \t#{model_fit.sigma2}"
-puts "Standard deviantion: \t#{Math::sqrt(model_fit.sigma2)}"
+puts "Standard deviation: \t#{Math::sqrt(model_fit.sigma2)}"
+
+puts "-------------------------------------------"
+
+
+##############################################################################
+# Model with numerical and categorical variables as fixed and random effects # 
+##############################################################################
+
+df = Daru::DataFrame.from_csv '/home/alexej/github/MixedModels/examples/data/categorical_and_crossed_ran_ef.csv'
+
+# Fit the model
+model_fit = LMM.from_daru(response: :y, fixed_effects: [:intercept, :x, :a], 
+                          random_effects: [[:intercept, :x], [:intercept, :a]], 
+                          grouping: [:grp_for_x, :grp_for_a],
+                          data: df)
+
+# Print some results
+puts "\n-------------------------------------------"
+puts "Model with numerical and categorical variables as fixed and random effects"
+puts "-------------------------------------------"
+puts "REML criterion: \t#{model_fit.dev_optimal}"
+puts "Fixed effects:"
+puts model_fit.fix_ef
+puts "Variance: \t#{model_fit.sigma2}"
+puts "Standard deviation: \t#{Math::sqrt(model_fit.sigma2)}"
+puts "-------------------------------------------"

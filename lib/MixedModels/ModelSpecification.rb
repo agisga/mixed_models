@@ -70,16 +70,18 @@ module MixedModels
   # Generate a Proc object which parametrizes the transpose of the random effects covariance 
   # Cholesky factor Lambda as a function of theta. Lambda is defined as 
   # Lambda * Lambda^T = sigma^2*Sigma, where b ~ N(0,Sigma) is the distribution of the random 
-  # effects vector, and the scaling factor sigma^2 comes from (y|b=b_0) ~ N(X*beta+Z*b_0, sigma^2*I).
-  # Lambda^T is a upper triangular matrix of block-diagonal shape. The first +num_ran_ef.sum+ elements 
-  # of theta determine the diagonal of Lambda^T, and the remaining entries of theta specify the 
-  # off-diagonal entries of Lambda^T.
+  # effects vector, and the scaling factor sigma^2 comes from 
+  # (y|b=b_0) ~ N(X*beta+Z*b_0, sigma^2*I).
+  # Lambda^T is a upper triangular matrix of block-diagonal shape. The first +num_ran_ef.sum+ 
+  # elements of theta determine the diagonal of Lambda^T, and the remaining entries of theta 
+  # specify the off-diagonal entries of Lambda^T.
   #
   # === Arguments
   #
-  # * +num_ran_ef+     - Array, where +num_ran_ef[i]+ is the number of random effects terms associated with
-  #                      the i'th grouping structure. 
-  # * +num_grp_levels+ - Array, where +num_grp_levels[i]+ is the number of levels of the i'th grouping structure.
+  # * +num_ran_ef+     - Array, where +num_ran_ef[i]+ is the number of random effects terms 
+  #                      associated with the i'th grouping structure. 
+  # * +num_grp_levels+ - Array, where +num_grp_levels[i]+ is the number of levels of the i'th 
+  #                      grouping structure.
   #
   # === Usage
   #
@@ -95,14 +97,16 @@ module MixedModels
     raise(ArgumentError, "Supplied number of random effects does not match the supplied number of grouping structures") unless num_ran_ef.length == num_grp_levels.length
     cov_fun = Proc.new do |theta|
       lambdat_array = Array.new # Array of component matrices of the block-diagonal lambdat
-      # the first num_ran_ef.sum elements of theta parametrize the diagonal of the covariance matrix
+      # the first num_ran_ef.sum elements of theta parametrize the diagonal of 
+      # the covariance matrix
       th_count_diag = 0 
       # the remaining theta parametrize the off-diagonal entries of the covariance matrix
       th_count = num_ran_ef.sum 
       (0...num_grp_levels.length).each do |i|
         k = num_ran_ef[i]
         m = num_grp_levels[i]
-        lambdat_component = NMatrix.diagonal(theta[th_count_diag...(th_count_diag+k)], dtype: :float64)
+        lambdat_component = NMatrix.diagonal(theta[th_count_diag...(th_count_diag+k)], 
+                                             dtype: :float64)
         th_count_diag += k
         (0...(k-1)).each do |j|
           ((j+1)...k).each do |l|
