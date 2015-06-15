@@ -5,7 +5,7 @@ describe Daru::DataFrame do
     it "creates a data frame of interaction effects in the sense of linear models" do
       df1 = Daru::DataFrame.new([[1,2],[3,4]], order: ['a','b'])
       df2 = Daru::DataFrame.new([[1,1],[2,2]], order: ['x','y'])
-      df  = Daru::DataFrame.new([[1,2],[2,4],[3,4],[6,8]], order: ['ax','ay','bx','by'])
+      df  = Daru::DataFrame.new([[1,2],[2,4],[3,4],[6,8]], order: ['a_and_x','a_and_y','b_and_x','b_and_y'])
       expect(df1.interaction_df_with(df2).to_a).to eq(df.to_a)
     end
   end
