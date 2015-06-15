@@ -40,7 +40,7 @@ module Daru
     #
     # > df1.interaction_df_with df2
     #            # => <Daru::DataFrame:69920381579240 @name = d6773420-31ce-45dc-8639-b94b276b63a6 @size = 2>
-    #                   ax         ay         bx         by 
+    #                 a_and_x    a_and_y    b_and_x    b_and_y 
     #         0          1          2          3          6 
     #         1          2          4          4          8 
     #
@@ -48,7 +48,7 @@ module Daru
       df = Daru::DataFrame.new([], order: [])
       self.each_vector_with_index do |vec, name|
         other.each_vector_with_index do |other_vec, other_name|
-          product_name = (name.to_s + other_name.to_s).to_sym
+          product_name = (name.to_s + "_and_" + other_name.to_s).to_sym
           df[product_name] = vec * other_vec
         end
       end
