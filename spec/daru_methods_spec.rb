@@ -24,9 +24,9 @@ describe Daru::DataFrame do
                                  [0.0,1.0,1.0,0.0,0.0,0.0,0.0],
                                  [0.0,0.0,0.0,0.0,1.0,0.0,1.0],
                                  [0.0,0.0,0.0,0.0,0.0,1.0,0.0],
-                                 [0.0,1.0,0.0,1.0,1.0,0.0,1.0]],
+                                 [1.0,0.0,1.0,0.0,0.0,1.0,0.0]],
                                 order: ['num','nonum_lvl_b',
-                                        'nonum_lvl_c','nonum_lvl_d','sym_lvl_p']) 
+                                        'nonum_lvl_c','nonum_lvl_d','sym_lvl_q']) 
       expect(@df.to_a).to eq(df2.to_a)
     end
 
@@ -37,8 +37,8 @@ describe Daru::DataFrame do
 
     it "returns the names of the newly created vectors" do
       names = @df.replace_categorical_vectors_with_indicators!
-      expect(names[:nonum] + names[:sym]).to eq([:nonum_lvl_b, :nonum_lvl_c, 
-                                                 :nonum_lvl_d, :sym_lvl_p])
+      expect(names.values.flatten).to eq([:nonum_lvl_b, :nonum_lvl_c, 
+                                          :nonum_lvl_d, :sym_lvl_q])
     end
   end
 end
