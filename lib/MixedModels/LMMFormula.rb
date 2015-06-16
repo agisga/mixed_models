@@ -16,17 +16,17 @@ module MixedModels
   # z         = intercept + x + y + x*y + 
   #             (intercept + x + y + x*y| u) + 
   #             (intercept | w)
-  # z.to_input_for_lmm_from_daru
-  # z.fixed_effects # => [:intercept, :x, :y, [:x, :y]]
-  # z.random_effects # => [[:intercept, :x, :y, [:x, :y]], [:intercept]]
-  # z.grouping # => [:u, :w]
+  # input     = z.to_input_for_lmm_from_daru
+  # input[:fixed_effects] # => [:intercept, :x, :y, [:x, :y]]
+  # input[:random_effects] # => [[:intercept, :x, :y, [:x, :y]], [:intercept]]
+  # input[:grouping] # => [:u, :w]
   #
   class LMMFormula
     def initialize(content)
       @content = content
     end
 
-    attr_reader :content, :fixed_effects, :random_effects, :grouping
+    attr_reader :content
 
     def +(x)
       LMMFormula.new(@content + x.content)
@@ -41,7 +41,7 @@ module MixedModels
       LMMFormula.new([["random_effect"] + @content + x.content])
     end
 
-    # Transform +@content+ into multiple Arrays, which can be used as
+    # Transform +@content+ into a Hash containing multiple Arrays, which can be used as
     # input to LMM#from_daru
     #
     # === Usage
@@ -50,27 +50,28 @@ module MixedModels
     #  x         = MixedModels::lmm_variable(:x)
     #  u         = MixedModels::lmm_variable(:u)
     #  y         = intercept + x + (intercept + x | u)
-    #  y.to_input_for_lmm_from_daru
-    #  y.fixed_effects # => [:intercept, :x]
-    #  y.random_effects # => [[:intercept, :x]]
-    #  y.grouping # => [:u]
+    #  input     = y.to_input_for_lmm_from_daru
+    #  input[:fixed_effects] # => [:intercept, :x]
+    #  input[:random_effects] # => [[:intercept, :x]]
+    #  input[:grouping] # => [:u]
     #
     def to_input_for_lmm_from_daru
-      @fixed_effects  = Array.new
-      @random_effects = Array.new
-      @grouping       = Array.new
+      lmm_from_daru_input = Hash.new
+      lmm_from_daru_input[:fixed_effects]  = Array.new
+      lmm_from_daru_input[:random_effects] = Array.new
+      lmm_from_daru_input[:grouping]       = Array.new
       @content.each do |item|
         if item.is_a?(Symbol) then
-          @fixed_effects.push(item)
+          lmm_from_daru_input[:fixed_effects].push(item)
         elsif item.is_a?(Array) then
           c = item.clone # in order to keep @content unchanged
           if c[0] == "interaction_effect" then
             c.shift
             raise "bi-variate interaction effects allowed only" unless c.length == 2
-            @fixed_effects.push(c)
+            lmm_from_daru_input[:fixed_effects].push(c)
           elsif c[0] == "random_effect" then
             c.shift
-            @grouping.push(c.pop)
+            lmm_from_daru_input[:grouping].push(c.pop)
             ran_ef = Array.new
             c.each do |cc|
               if cc.is_a?(Symbol) then
@@ -81,13 +82,13 @@ module MixedModels
                   raise "bi-variate interaction effects allowed only" unless cc.length == 2
                   ran_ef.push(cc)
                 else
-                  raise "invalid formulation of LMMFormula.content"
+                  raise "invalid formulation of random effects in LMMFormula"
                 end
               else
-                raise "invalid formulation of LMMFormula.content"
+                raise "invalid formulation of random effects in LMMFormula"
               end
             end
-            @random_effects.push(ran_ef)
+            lmm_from_daru_input[:random_effects].push(ran_ef)
           else
             raise "invalid formulation of LMMFormula.content"
           end
@@ -95,11 +96,11 @@ module MixedModels
           raise "invalid formulation of LMMFormula.content"
         end
       end
+      return lmm_from_daru_input
     end
   end
 
-  def lmm_variable(x)
+  def MixedModels.lmm_variable(x)
     LMMFormula.new([x])
   end
-
 end

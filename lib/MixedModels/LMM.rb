@@ -126,6 +126,60 @@ class LMM
     # TODO: store more info in ran_ef, such as p-values on 95%CI
   end
 
+  def LMM.from_formula(formula:, data:, weights: nil, offset: 0.0, reml: true, 
+                       start_point: nil, epsilon: 1e-6, max_iterations: 1e6)
+    raise(ArgumentError, "formula must be supplied as a String") unless formula.is_a? String
+    raise(NotImplementedError, "The operator * is not supported in formula formulations." +
+          "Use the operators + and : instead (e.g. a*b is equivalent to a+b+a:b)") if formula.include? "*"
+    raise(NotImplementedError, "Nested random effects are not supported in formula formulation." +
+          "The model can still be fit by adding a new column representing the nested grouping structure" +
+          "to the data frame.") if formula.include? "/"
+    raise(NotImplementedError, "The operator || is not supported in formula formulations." +
+          "Reformulate the formula using single vertical lines | instead" +
+          "(e.g. (Days || Subj) is equivalent to (1 | Subj) + (0 + Days | Subj))") if formula.include? "||"
+    raise(NotImplementedError, "The notation -1 in not supported." +
+          "Use 0 instead, in order to denote the exclusion of an intercept term.") if formula.include? "-1"
+    #remove whitespaces
+    formula.gsub!(%r{\s+}, "")
+    # deal with the intercept (LMM#from_daru handles the case when both, intercept and 
+    # no_intercept, are included)
+    formula.gsub!("~", "~intercept+")
+    formula.gsub!("(", "(intercept+")
+    formula.gsub!("+1", "")
+    formula.gsub!("+0", "+no_intercept")
+    # extract the response and right hand side
+    split = formula.split "~"
+    response = split[0].strip.to_sym
+    rhs = split[1] 
+    # get all variable names from rhs
+    vars = rhs.split %r{\s*[+|():]\s*}
+    vars.delete("")
+    vars.uniq!
+    # In the String rhs, wrap each variable name "foo" in "MixedModels::lmm_variable(:foo)":
+    # Put whitespaces around symbols "+", "|", ":", "(" and ")", and then
+    # substitute "name" with "MixedModels::lmm_variable(name)" only if it is surrounded by white 
+    # spaces; this trick is used to ensure that for example the variable "a" is not found within 
+    # the variable "year"
+    rhs.gsub!("+", " + ")
+    rhs.gsub!(":", " : ")
+    rhs.gsub!("|", " | ")
+    rhs.gsub!("(", " ( ")
+    rhs.gsub!(")", " ) ")
+    rhs = " " + rhs + " "
+    vars.each { |name| rhs.gsub!(" " + name + " ", "MixedModels::lmm_variable(:" + name + ")") } 
+    # replace ":" with "*", because the LMMFormula class requires this convention
+    rhs.gsub!(":", "*")
+    # generate an LMMFormula
+    rhs_lmm_formula = eval(rhs)
+    #fit the model
+    rhs_input = rhs_lmm_formula.to_input_for_lmm_from_daru
+    model = LMM.from_daru(response: response, fixed_effects: rhs_input[:fixed_effects],
+                          random_effects: rhs_input[:random_effects], grouping: rhs_input[:grouping],
+                          weights: weights, offset: offset, reml: reml, start_point: start_point, 
+                          epsilon: epsilon, max_iterations: max_iterations)
+    return model
+  end
+
   # Fit and store a linear mixed effects model from data supplied as Daru::DataFrame.
   # Parameter estimates are obtained via LMM#initialize.
   # The fixed effects are specified as an Array, where +:intercept+ specifies the inclusion
