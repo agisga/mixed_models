@@ -94,6 +94,12 @@ module Daru
         # all non-numeric vectors are considered categorical data
         unless vec.type == :numeric
           levels = vec.to_a.uniq
+          # sort the levels if possible
+          begin
+            levels.sort!
+          rescue
+            levels = vec.to_a.uniq
+          end
           level_indices = Array.new
           unless for_model_without_intercept 
             levels.shift

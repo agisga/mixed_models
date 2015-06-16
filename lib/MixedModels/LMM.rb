@@ -131,15 +131,13 @@ class LMM
   # The fixed effects are specified as an Array, where +:intercept+ specifies the inclusion
   # of an intercept term into the model (it is not included automatically). The random effects
   # are specified as an Array of Arrays, where the variables in each sub-Array correspond to 
-  # a common grouping factor (given in the Array +grouping+) and are modeled as correlated; as
-  # for the fixed effects, +:intercept+ can be used to denote a random intercept term. 
+  # a common grouping factor (given in the Array +grouping+) and are modeled as correlated; 
+  # +:intercept+ can be used to denote a random intercept term. 
   # An interaction effects can be included as an Array of length two, containing the 
-  # respective variable names.
-  #
+  # respective variable names. Similary, nesting of the random effects is denoted by an
+  # Array of length two as an element of the Array +grouping+.
   # All non-numeric vectors in the data frame are considered to be categorical variables
   # and treated accordingly.
-  #
-  # Currently, nested random effects cannot be specified with this interface.
   #
   # === Arguments
   #
@@ -195,6 +193,59 @@ class LMM
       end
     end
 
+    # deal with interaction effects and nested grouping factors
+    interaction_names = Array.new
+    fixed_effects.each_with_index do |ef, ind|
+      if ef.is_a? Array then
+        raise(NotImplementedError, "interaction effects can only be bi-variate") unless ef.length == 2
+        if categorical_names.include? ef[0] then
+          #TODO: implement this!
+          raise(NotImplementedError, "interaction effects cannot be categorical") 
+        else
+          if categorical_names.include? ef[1] then
+            #TODO: implement this!
+            raise(NotImplementedError, "interaction effects cannot be categorical") 
+          else
+            inter_name = (ef[0].to_s + "_and_" + ef[1].to_s).to_sym
+            unless interaction_names.include? inter_name
+              data[inter_name] = data[ef[0]] * data[ef[1]] 
+              interaction_names.push(inter_name)
+            end
+            fixed_effects[ind] = inter_name
+          end
+        end
+      end
+    end
+    random_effects.each do |ran_ef|
+      ran_ef.each_with_index do |ef, ind|
+        if ef.is_a? Array then
+          raise(NotImplementedError, "interaction effects can only be bi-variate") unless ef.length == 2
+          if categorical_names.include? ef[0] then
+            #TODO: implement this!
+            raise(NotImplementedError, "interaction effects cannot be categorical") 
+          else
+            if categorical_names.include? ef[1] then
+              #TODO: implement this!
+              raise(NotImplementedError, "interaction effects cannot be categorical") 
+            else
+              inter_name = (ef[0].to_s + "_and_" + ef[1].to_s).to_sym
+              unless interaction_names.include? inter_name
+                data[inter_name] = data[ef[0]] * data[ef[1]]
+                interaction_names.push(inter_name)
+              end
+              ran_ef[ind] = inter_name
+            end
+          end
+        end
+      end
+    end
+    grouping.each_with_index do |grp, ind|
+      if grp.is_a? Array then
+        #TODO: implement this!
+        raise(NotImplementedError, "nested effects not implemented yet")
+      end
+    end
+    
     # add an intercept column, so the intercept will be used whenever specified
     data[:intercept] = Array.new(n) {1.0}
 

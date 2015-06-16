@@ -72,9 +72,14 @@ puts "-------------------------------------------"
 df = Daru::DataFrame.from_csv '/home/alexej/github/MixedModels/examples/data/categorical_and_crossed_ran_ef.csv'
 
 # Fit the model
+#model_fit = LMM.from_daru(response: :y, fixed_effects: [:intercept, :x, :a], 
+#                          random_effects: [[:intercept, :x], [:intercept, :a]], 
+#                          grouping: [:grp_for_x, :grp_for_a],
+#                          data: df)
+
 model_fit = LMM.from_daru(response: :y, fixed_effects: [:intercept, :x, :a], 
-                          random_effects: [[:intercept, :x], [:intercept, :a]], 
-                          grouping: [:grp_for_x, :grp_for_a],
+                          random_effects: [[:intercept, :x]], 
+                          grouping: [:grp_for_x],
                           data: df)
 
 # Print some results
