@@ -178,6 +178,8 @@ class LMM
           "Use 0 instead, in order to denote the exclusion of an intercept term.") if formula.include? "-1"
     #remove whitespaces
     formula.gsub!(%r{\s+}, "")
+    # replace ":" with "*", because the LMMFormula class requires this convention
+    formula.gsub!(":", "*")
     # deal with the intercept (LMM#from_daru handles the case when both, intercept and 
     # no_intercept, are included)
     formula.gsub!("~", "~intercept+")
@@ -189,31 +191,33 @@ class LMM
     response = split[0].strip.to_sym
     rhs = split[1] 
     # get all variable names from rhs
-    vars = rhs.split %r{\s*[+|():]\s*}
+    vars = rhs.split %r{\s*[+|()*]\s*}
     vars.delete("")
     vars.uniq!
     # In the String rhs, wrap each variable name "foo" in "MixedModels::lmm_variable(:foo)":
-    # Put whitespaces around symbols "+", "|", ":", "(" and ")", and then
+    # Put whitespaces around symbols "+", "|", "*", "(" and ")", and then
     # substitute "name" with "MixedModels::lmm_variable(name)" only if it is surrounded by white 
     # spaces; this trick is used to ensure that for example the variable "a" is not found within 
     # the variable "year"
     rhs.gsub!("+", " + ")
-    rhs.gsub!(":", " : ")
+    rhs.gsub!("*", " * ")
     rhs.gsub!("|", " | ")
     rhs.gsub!("(", " ( ")
     rhs.gsub!(")", " ) ")
     rhs = " " + rhs + " "
     vars.each { |name| rhs.gsub!(" " + name + " ", "MixedModels::lmm_variable(:" + name + ")") } 
-    # replace ":" with "*", because the LMMFormula class requires this convention
-    rhs.gsub!(":", "*")
     # generate an LMMFormula
     rhs_lmm_formula = eval(rhs)
     #fit the model
     rhs_input = rhs_lmm_formula.to_input_for_lmm_from_daru
-    model = LMM.from_daru(response: response, fixed_effects: rhs_input[:fixed_effects],
-                          random_effects: rhs_input[:random_effects], grouping: rhs_input[:grouping],
-                          weights: weights, offset: offset, reml: reml, start_point: start_point, 
-                          epsilon: epsilon, max_iterations: max_iterations)
+    model = LMM.from_daru(response: response, 
+                          fixed_effects: rhs_input[:fixed_effects],
+                          random_effects: rhs_input[:random_effects], 
+                          grouping: rhs_input[:grouping],
+                          data: data, 
+                          weights: weights, offset: offset, reml: reml, 
+                          start_point: start_point, epsilon: epsilon, 
+                          max_iterations: max_iterations)
     return model
   end
 
