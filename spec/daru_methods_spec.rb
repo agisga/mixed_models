@@ -10,35 +10,37 @@ describe Daru::DataFrame do
     end
   end
 
-  context "#replace_categorical_vectors_with_indicators!" do
+  context "#create_indicator_vectors_for_categorical_vectors!" do
     before do
       @df = Daru::DataFrame.new([(1..7).to_a, 
                                  ['a','b','b','a','c','d','c'],
                                  [:q, :p, :q, :p, :p, :q, :p]],
-                                order: ['num','nonum','sym']) 
+                                order: ['num','char','sym']) 
     end
 
-    it "replaces all non-numeric vectors with 0-1 indicator columns" do
-      @df.replace_categorical_vectors_with_indicators!
+    it "creates 0-1 indicator columns for all non-numeric vectors" do
+      @df.create_indicator_vectors_for_categorical_vectors!
       df2 = Daru::DataFrame.new([(1..7).to_a, 
+                                 ['a','b','b','a','c','d','c'],
+                                 [:q, :p, :q, :p, :p, :q, :p],
                                  [0.0,1.0,1.0,0.0,0.0,0.0,0.0],
                                  [0.0,0.0,0.0,0.0,1.0,0.0,1.0],
                                  [0.0,0.0,0.0,0.0,0.0,1.0,0.0],
                                  [1.0,0.0,1.0,0.0,0.0,1.0,0.0]],
-                                order: ['num','nonum_lvl_b',
-                                        'nonum_lvl_c','nonum_lvl_d','sym_lvl_q']) 
+                                order: ['num', 'char', 'sym', 'char_lvl_b',
+                                        'char_lvl_c', 'char_lvl_d', 'sym_lvl_q']) 
       expect(@df.to_a).to eq(df2.to_a)
     end
 
-    it "returns the names of the deleted vectors" do
-      names = @df.replace_categorical_vectors_with_indicators!
-      expect(names.keys).to eq([:nonum, :sym])
+    it "returns the names of all non-numeric vectors" do
+      names = @df.create_indicator_vectors_for_categorical_vectors!
+      expect(names.keys).to eq([:char, :sym])
     end
 
-    it "returns the names of the newly created vectors" do
-      names = @df.replace_categorical_vectors_with_indicators!
-      expect(names.values.flatten).to eq([:nonum_lvl_b, :nonum_lvl_c, 
-                                          :nonum_lvl_d, :sym_lvl_q])
+    it "returns the names of the newly created 0-1 indicator vectors" do
+      names = @df.create_indicator_vectors_for_categorical_vectors!
+      expect(names.values.flatten).to eq([:char_lvl_b, :char_lvl_c, 
+                                          :char_lvl_d, :sym_lvl_q])
     end
   end
 end

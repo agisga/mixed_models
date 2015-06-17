@@ -55,13 +55,14 @@ module Daru
       return df
     end
 
-    # Replaces all non-numeric vectors with 0-1-indicator columns.
-    # Returns the names/indices of the deleted vectors and the created new vectors.
+    # TODO: Adjust this comment
+    # Create for all non-numeric vectors 0-1-indicator columns.
+    # Returns the names/indices of the non-numeric vectors and the corresponding created new vectors.
     #
     # === Returns
     #
-    # A Hash where the keys are the names of the deleted vectors, and their values
-    # are Arrays containing the names of the vectors which have replaced the deleted vector
+    # A Hash where the keys are the names of all non-numeric vectors, and their values
+    # are Arrays containing the names of the corresponding 0-1 valued vectors
     #
     # === Arguments
     #
@@ -75,19 +76,19 @@ module Daru
     # === Usage
     #
     # > df = Daru::DataFrame.new([(1..7).to_a, ['a','b','b','a','c','d','c']],
-    #                            order: ['num','nonum']) 
-    # > df.replace_categorical_vectors_with_indicators!
-    #   # => #<Daru::DataFrame:70062395762160 @name = c647bf98-142f-4a0e-a4da-42ca8efdd20b @size = 7>
-    #                    num  nonum_lvl_b  nonum_lvl_c  nonum_lvl_d 
-    #           0          1          0.0          0.0          0.0 
-    #           1          2          1.0          0.0          0.0 
-    #           2          3          1.0          0.0          0.0 
-    #           3          4          0.0          0.0          0.0 
-    #           4          5          0.0          1.0          0.0 
-    #           5          6          0.0          0.0          1.0 
-    #           6          7          0.0          1.0          0.0
+    #                            order: ['int','char']) 
+    # > df.create_indicator_vectors_for_categorical_vectors!
+    #   # => <Daru::DataFrame:70212314363900 @name = 1a2a49d9-35d3-4adf-a993-5266d7d79442 @size = 7>
+    #              int       char char_lvl_b char_lvl_c char_lvl_d 
+    #     0          1          a        0.0        0.0        0.0 
+    #     1          2          b        1.0        0.0        0.0 
+    #     2          3          b        1.0        0.0        0.0 
+    #     3          4          a        0.0        0.0        0.0 
+    #     4          5          c        0.0        1.0        0.0 
+    #     5          6          d        0.0        0.0        1.0 
+    #     6          7          c        0.0        1.0        0.0 
     #
-    def replace_categorical_vectors_with_indicators!(for_model_without_intercept: false)
+    def create_indicator_vectors_for_categorical_vectors!(for_model_without_intercept: false)
       indices = Hash.new
 
       self.each_vector_with_index do |vec, name|
@@ -113,8 +114,9 @@ module Daru
             self.add_vector(ind, vec_for_level_l)
             level_indices.push(ind.to_sym)
           end
+          # TODO: This is redundant (remove it and adjust method name and description)
           # delete the categorical vector, which just got replaced
-          self.delete_vector(name)
+          # self.delete_vector(name)
           indices[name] = level_indices
         end
       end

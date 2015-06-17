@@ -295,8 +295,14 @@ class LMM
     end
 
     # deal with categorical (non-numeric) variables
-    no_intercept = false if fixed_effects.include? :intercept 
-    new_names = data.replace_categorical_vectors_with_indicators!(for_model_without_intercept: no_intercept)
+    if fixed_effects.include? :intercept then
+      no_intercept = false 
+    else
+      no_intercept = true
+    end
+    # FIXME: Currently the situation, where fixed effects have an intercept but random effects don't, 
+    # is not resolved correctly, because we check only for the fixed effects if they include an intercept term
+    new_names = data.create_indicator_vectors_for_categorical_vectors!(for_model_without_intercept: no_intercept)
     categorical_names = new_names.keys
     categorical_names.each do |name|
       # replace the categorical variable name in (non-interaction) fixed_effects
