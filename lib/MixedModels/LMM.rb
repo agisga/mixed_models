@@ -126,6 +126,43 @@ class LMM
     # TODO: store more info in ran_ef, such as p-values on 95%CI
   end
 
+  # Fit and store a linear mixed effects model, specified using a formula interface,
+  # from data supplied as Daru::DataFrame. Parameter estimates are obtained via 
+  # LMM#from_daru and LMM#initialize.
+  #
+  # The response variable, fixed effects and random effects are specified with a formula,
+  # which uses a smaller version of the laguage of the formula interface to the R package lme4. 
+  # Compared to lme4 the formula language here is somewhat restricted by not allowing the use
+  # of operators "*" and "||" (equivalent formula formulations are always possible in
+  # those cases, using only "+", ":" and "|"). Moreover, nested random effects and the 
+  # corresponding operator "/" are not supported. Much detail on formula definitions 
+  # can be found in the documentation, papers and tutorials to lme4.
+  #
+  # === Arguments
+  #
+  # * +formula+        - a String containing a two-sided linear formula describing both, the 
+  #                      fixed effects and random effects of the model, with the response on 
+  #                      the left of a ~ operator and the terms, separated by + operators, 
+  #                      on the right hand side. Random effects specifications are in 
+  #                      parentheses () and contain a vertical bar |. Expressions for design 
+  #                      matrices are on the left of the vertical bar |, and grouping factors 
+  #                      are on the right. 
+  # * +data+           - a Daru::DataFrame object, containing the response, fixed and random 
+  #                      effects, as well as the grouping variables
+  # * +weights+        - optional Array of prior weights
+  # * +offset+         - an optional vector of offset terms which are known 
+  #                      a priori; a nx1 NMatrix
+  # * +reml+           - if true than the profiled REML criterion will be used as the objective
+  #                      function for the minimization; if false then the profiled deviance 
+  #                      will be used; defaults to true
+  # * +start_point+    - an optional Array specifying the initial parameter estimates for the 
+  #                      minimization
+  # * +epsilon+        - an optional  small number specifying the thresholds for the 
+  #                      convergence check of the optimization algorithm; see the respective 
+  #                      documentation for more detail
+  # * +max_iterations+ - optional, the maximum number of iterations for the optimization 
+  #                      algorithm
+  #
   def LMM.from_formula(formula:, data:, weights: nil, offset: 0.0, reml: true, 
                        start_point: nil, epsilon: 1e-6, max_iterations: 1e6)
     raise(ArgumentError, "formula must be supplied as a String") unless formula.is_a? String
@@ -182,28 +219,37 @@ class LMM
 
   # Fit and store a linear mixed effects model from data supplied as Daru::DataFrame.
   # Parameter estimates are obtained via LMM#initialize.
-  # The fixed effects are specified as an Array, where +:intercept+ specifies the inclusion
-  # of an intercept term into the model (it is not included automatically). The random effects
-  # are specified as an Array of Arrays, where the variables in each sub-Array correspond to 
-  # a common grouping factor (given in the Array +grouping+) and are modeled as correlated; 
-  # +:intercept+ can be used to denote a random intercept term. 
-  # An interaction effects can be included as an Array of length two, containing the 
-  # respective variable names. Similary, nesting of the random effects is denoted by an
-  # Array of length two as an element of the Array +grouping+.
+  #
+  # The fixed effects are specified as an Array of Symbols (for the respective vectors in
+  # the data frame).
+  # The random effects are specified as an Array of Arrays, where the variables in each
+  # sub-Array correspond to a common grouping factor (given in the Array +grouping+) and are 
+  # modeled as correlated.
+  # For both, fixed and random effects, +:intercept+ can be used to denote an intercept term; and 
+  # +:no_intercept+ denotes the exclusion of an intercept term, even if +:intercept+ is given. 
+  # An interaction effect can be included as an Array of length two, containing the 
+  # respective variable names. 
+  #
   # All non-numeric vectors in the data frame are considered to be categorical variables
   # and treated accordingly.
+  #
+  # Nested random effects are currently not supported by this interface.
   #
   # === Arguments
   #
   # * +response+       - name of the response variable in +data+
   # * +fixed_effects+  - names of the fixed effects in +data+, given as an Array. An 
   #                      interaction effect can be specified as Array of length two.
-  #                      An intercept term can be denoted as +:intercept+
+  #                      An intercept term can be denoted as +:intercept+; and 
+  #                      +:no_intercept+ denotes the exclusion of an intercept term, even 
+  #                      if +:intercept+ is given.
   # * +random_effects+ - names of the random effects in +data+, given as an Array of Arrays;
   #                      where the variables in each (inner) Array share a common grouping 
   #                      structure, and the corresponding random effects are modeled as 
   #                      correlated. An interaction effect can be specified as Array of 
-  #                      length two. An intercept term can be denoted as +:intercept+
+  #                      length two. An intercept term can be denoted as +:intercept+; and 
+  #                      +:no_intercept+ denotes the exclusion of an intercept term, even 
+  #                      if +:intercept+ is given.
   # * +grouping+       - an Array of the names of the variables in +data+, which determine the
   #                      grouping structures for +random_effects+
   # * +data+           - a Daru::DataFrame object, containing the response, fixed and random 
@@ -231,6 +277,18 @@ class LMM
 
     # response vector
     y = NMatrix.new([n,1], data[response].to_a, dtype: :float64)
+
+    # deal with the intercept
+    if fixed_effects.include? :no_intercept then
+      fixed_effects.delete(:intercept)
+      fixed_effects.delete(:no_intercept)
+    end
+    random_effects.each do |ran_ef|
+      if ran_ef.include? :no_intercept then
+        ran_ef.delete(:intercept)
+        ran_ef.delete(:no_intercept)
+      end
+    end
 
     # deal with categorical (non-numeric) variables
     no_intercept = false if fixed_effects.include? :intercept 
