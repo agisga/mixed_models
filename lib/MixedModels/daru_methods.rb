@@ -55,7 +55,6 @@ module Daru
       return df
     end
 
-    # TODO: Adjust this comment
     # Create for all non-numeric vectors 0-1-indicator columns.
     # Returns the names/indices of the non-numeric vectors and the corresponding created new vectors.
     #
@@ -114,9 +113,6 @@ module Daru
             self.add_vector(ind, vec_for_level_l)
             level_indices.push(ind.to_sym)
           end
-          # TODO: This is redundant (remove it and adjust method name and description)
-          # delete the categorical vector, which just got replaced
-          # self.delete_vector(name)
           indices[name] = level_indices
         end
       end
