@@ -15,10 +15,13 @@ class NMatrix
   #  a.kron_prod_1D b #  =>  [ [0, 0, 3, 2, 0, 0] ]
   #  
   def kron_prod_1D(v)
+    #use && instead of and: http://devblog.avdi.org/2010/08/02/using-and-and-or-in-ruby/
     unless self.dimensions==2 and v.dimensions==2 and self.shape[0]==1 and v.shape[0]==1
       raise ArgumentError, "Implemented for NMatrix of shape [1,n] (i.e. one row) only."
     end
     #TODO: maybe some outer product function from LAPACK would be more efficient to compute for m
+    #We don't have anything like this from LAPACK implemented currently in nmatrix. If you want
+    #something, let us know.
     m = self.transpose.dot v
     l = self.shape[1]*v.shape[1]
     return m.reshape([1,l])
@@ -36,6 +39,7 @@ class NMatrix
   #
   # a = NMatrix.new([3,2], [1,2,1,2,1,2], dtype: dtype, stype: stype)
   # b = NMatrix.new([3,2], (1..6).to_a, dtype: dtype, stype: stype)
+  # Your b below should have brackets between rows:
   # m = a.khatri_rao_rows b # =>  [ [1.0, 2.0,  2.0,  4.0,
   #                                  3.0, 4.0,  6.0,  8.0,
   #                                  5.0, 6.0, 10.0, 12.0] ]
@@ -45,8 +49,10 @@ class NMatrix
     n = self.shape[0]
     raise NotImplementedError, "Both matrices must have the same number of rows" unless n==mat.shape[0]
     m = self.shape[1]*mat.shape[1]
+    #should use NMatrix::upcast(dtype1,dtype2) to find the proper dtype for the product:
     khrao_prod = NMatrix.new([n,m], dtype: :float64)
     (0...n).each do |i|
+      #don't use such similar variable names
       kr_prod = self.row(i).kron_prod_1D mat.row(i)
       khrao_prod[i,0...m] = kr_prod
     end
@@ -66,6 +72,7 @@ class NMatrix
   # x = a.solve(b)
   #
   def matrix_valued_solve(rhs_mat)
+    #add a comment about this workaroudn, or a link to the nmatrix issue
     rhs_mat_t = rhs_mat.transpose
     lhs_mat = self.clone
     NMatrix::LAPACK::clapack_gesv(:row, lhs_mat.shape[0], rhs_mat.shape[1], 
@@ -144,7 +151,9 @@ class NMatrix
         k = block_sizes[n]
         block_pos = block_sizes[0...n].sum
         # populate the n'th block in the block-diagonal matrix
-        (0...k).each do |i|
+        #can you do this with a slice assignment?
+        #bdiag[block_pos...block_pos+k,block_pos...block_pos+k] = params[n]
+        (0...k).each do |i| #or you can say k.times do |i|
           (0...k).each do |j|
             bdiag[block_pos+i,block_pos+j] = params[n][i,j]
           end

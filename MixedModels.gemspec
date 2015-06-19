@@ -4,6 +4,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'MixedModels/version'
 
 Gem::Specification.new do |spec|
+  #gem name should be lowercase with underscores, see http://guides.rubygems.org/name-your-gem/
   spec.name          = "MixedModels"
   spec.version       = MixedModels::VERSION
   spec.authors       = ["agisga"]

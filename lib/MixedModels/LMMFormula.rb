@@ -32,6 +32,10 @@ module MixedModels
       LMMFormula.new(@content + x.content)
     end
 
+    #I know I was the one who suggested this in the first place, but now it
+    #seems like you might want to use something more structured than arrays
+    #for the effects below, something like: { :effect => :interaction, :vars => [:Age,:Location] }
+
     def *(x)
       raise "can only call if both operands are single variables" if content.size !=1 || x.content.size !=1
       LMMFormula.new([["interaction_effect", @content[0], x.content[0]]])
@@ -81,6 +85,7 @@ module MixedModels
                   cc.shift
                   raise "bi-variate interaction effects allowed only" unless cc.length == 2
                   ran_ef.push(cc)
+                #this is difficult to read, figuring out which else goes with what
                 else
                   raise "invalid formulation of random effects in LMMFormula"
                 end
@@ -101,6 +106,7 @@ module MixedModels
   end
 
   def MixedModels.lmm_variable(x)
+    #check if x is symbol?
     LMMFormula.new([x])
   end
 end

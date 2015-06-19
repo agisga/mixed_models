@@ -26,6 +26,8 @@ class LMM
   # * +zt+             - transpose of the random effects model matrix as a dense NMatrix
   # * +lambdat+        - upper triangular Cholesky factor of the relative 
   #                      covariance matrix of the random effects; a dense NMatrix
+  #I still don't get this. lambdat is supposed to be generated as a function of
+  #theta, which is an unknown parameter. What does this argument do?
   # * +weights+        - optional Array of prior weights
   # * +offset+         - an optional vector of offset terms which are known 
   #                      a priori; a nx1 NMatrix
@@ -33,6 +35,7 @@ class LMM
   #                      function for the minimization; if false then the profiled deviance 
   #                      will be used; defaults to true
   # * +start_point+    - an Array specifying the initial parameter estimates for the 
+  #What is the format for this?
   #                      minimization
   # * +lower_bound+    - an optional Array of lower bounds for each coordinate of the optimal 
   #                      solution 
@@ -43,7 +46,10 @@ class LMM
   #                      more detail
   # * +max_iterations+ - the maximum number of iterations for the optimization algorithm
   # * +thfun+          - a block or +Proc+ object that takes a value of +theta+ and produces
+  #What arguments does thfun expect?
+  #
   #                      the non-zero elements of +Lambdat+.  The structure of +Lambdat+
+  #Lambdat should be lowercase.
   #                      cannot change, only the numerical values.
   # === References
   # 
@@ -149,6 +155,8 @@ class LMM
   #                      are on the right. 
   # * +data+           - a Daru::DataFrame object, containing the response, fixed and random 
   #                      effects, as well as the grouping variables
+  #Maybe the following parameters which appear in all three of these functions should
+  #be encapsulated in a FitOptions class. On the hand, maybe not.
   # * +weights+        - optional Array of prior weights
   # * +offset+         - an optional vector of offset terms which are known 
   #                      a priori; a nx1 NMatrix
@@ -165,6 +173,16 @@ class LMM
   #
   def LMM.from_formula(formula:, data:, weights: nil, offset: 0.0, reml: true, 
                        start_point: nil, epsilon: 1e-6, max_iterations: 1e6)
+    #Just out of curiousity, why don't you support the * and ||? Are you planning
+    #to implement them later? I'm not blaming you if you skipped them to keep
+    #the parser simpler, I'm just curious.
+    #
+    #You probably want to separate out the formula parser into a separate function
+    #so that you could test it independent of providing a dataset. On a related
+    #note, it would be nice to have some specs for the parser to make sure
+    #it handles all the edge cases.
+    #Also, with the parser separate, someone else could implement a different fitter
+    #that didn't use daru.
     raise(ArgumentError, "formula must be supplied as a String") unless formula.is_a? String
     raise(NotImplementedError, "The operator * is not supported in formula formulations." +
           "Use the operators + and : instead (e.g. a*b is equivalent to a+b+a:b)") if formula.include? "*"
@@ -176,12 +194,20 @@ class LMM
           "(e.g. (Days || Subj) is equivalent to (1 | Subj) + (0 + Days | Subj))") if formula.include? "||"
     raise(NotImplementedError, "The notation -1 in not supported." +
           "Use 0 instead, in order to denote the exclusion of an intercept term.") if formula.include? "-1"
+    #Other ways you could validate input: Does it contains a "~"?
+    #Does it contain exactly one "~"? Are the rhs and lhs both non-empty?
+    #Are parentheses matched?
+    #Probably you also can't have a variable named intercept?
+
     #remove whitespaces
     formula.gsub!(%r{\s+}, "")
     # replace ":" with "*", because the LMMFormula class requires this convention
     formula.gsub!(":", "*")
     # deal with the intercept (LMM#from_daru handles the case when both, intercept and 
     # no_intercept, are included)
+    #It took me a while to figure out these 4 lines. Maybe add some comments.
+    #1+ is equivalent to intercept+
+    #The 1 is optional when specifying the formula?
     formula.gsub!("~", "~intercept+")
     formula.gsub!("(", "(intercept+")
     formula.gsub!("+1", "")
@@ -194,17 +220,32 @@ class LMM
     vars = rhs.split %r{\s*[+|()*]\s*}
     vars.delete("")
     vars.uniq!
+
+    #Do you want to impose any constraints on variable names? Are they allowed
+    #to start with numbers or contain symbols like "}"?
+
     # In the String rhs, wrap each variable name "foo" in "MixedModels::lmm_variable(:foo)":
     # Put whitespaces around symbols "+", "|", "*", "(" and ")", and then
     # substitute "name" with "MixedModels::lmm_variable(name)" only if it is surrounded by white 
     # spaces; this trick is used to ensure that for example the variable "a" is not found within 
     # the variable "year"
+    #I suspect there's a way to do this whole procedure with just one gsub and a clever regex, but maybe your procedure is clearer
+
+    #there should be a one-liner for this, something like?
+    #rhs.gsub!(/([+*|()])/, ' \1 ')
     rhs.gsub!("+", " + ")
     rhs.gsub!("*", " * ")
     rhs.gsub!("|", " | ")
     rhs.gsub!("(", " ( ")
     rhs.gsub!(")", " ) ")
+
+    #use string interpolation: rhs = " #{rhs} "
     rhs = " " + rhs + " "
+
+    #trying to construct a symbol just by adding a ":" will cause trouble if name isn't
+    #well-behaved (for example, if it starts with a number)
+    #maybe use:
+    #name.to_sym.inspect
     vars.each { |name| rhs.gsub!(" " + name + " ", "MixedModels::lmm_variable(:" + name + ")") } 
     # generate an LMMFormula
     rhs_lmm_formula = eval(rhs)
@@ -219,6 +260,11 @@ class LMM
                           start_point: start_point, epsilon: epsilon, 
                           max_iterations: max_iterations)
     return model
+    #I was going to comment that it's the "Ruby way" to avoid explicit `return`
+    #when possible. But apparently (http://stackoverflow.com/questions/1023146/is-it-good-style-to-explicitly-return-in-ruby)
+    #that's not really true, and besides it's your project so you should use
+    #whatever style you want. But either way, you can just say return
+    #LMM.from_daru(...), rather than defining model
   end
 
   # Fit and store a linear mixed effects model from data supplied as Daru::DataFrame.
@@ -229,6 +275,8 @@ class LMM
   # The random effects are specified as an Array of Arrays, where the variables in each
   # sub-Array correspond to a common grouping factor (given in the Array +grouping+) and are 
   # modeled as correlated.
+  #Since elements of random_effects correspond to elements of grouping, maybe you
+  #could combine these two together with a hash or small utility class?
   # For both, fixed and random effects, +:intercept+ can be used to denote an intercept term; and 
   # +:no_intercept+ denotes the exclusion of an intercept term, even if +:intercept+ is given. 
   # An interaction effect can be included as an Array of length two, containing the 
@@ -311,6 +359,7 @@ class LMM
       # replace the categorical variable name in (non-interaction) random_effects 
       random_effects.each_index do |i|
         ind = random_effects[i].find_index(name)
+        #?:
         random_effects[i][ind..ind] = new_names[name] unless ind.nil?
       end
     end
