@@ -15,7 +15,7 @@ class NMatrix
   #  a.kron_prod_1D b #  =>  [ [0, 0, 3, 2, 0, 0] ]
   #  
   def kron_prod_1D(v)
-    unless self.dimensions==2 and v.dimensions==2 and self.shape[0]==1 and v.shape[0]==1
+    unless self.dimensions==2 && v.dimensions==2 && self.shape[0]==1 && v.shape[0]==1
       raise ArgumentError, "Implemented for NMatrix of shape [1,n] (i.e. one row) only."
     end
     #TODO: maybe some outer product function from LAPACK would be more efficient to compute for m
@@ -36,19 +36,20 @@ class NMatrix
   #
   # a = NMatrix.new([3,2], [1,2,1,2,1,2], dtype: dtype, stype: stype)
   # b = NMatrix.new([3,2], (1..6).to_a, dtype: dtype, stype: stype)
-  # m = a.khatri_rao_rows b # =>  [ [1.0, 2.0,  2.0,  4.0,
-  #                                  3.0, 4.0,  6.0,  8.0,
-  #                                  5.0, 6.0, 10.0, 12.0] ]
+  # m = a.khatri_rao_rows b # =>  [ [1.0, 2.0,  2.0,  4.0]
+  #                                 [3.0, 4.0,  6.0,  8.0]
+  #                                 [5.0, 6.0, 10.0, 12.0] ]
   #
   def khatri_rao_rows(mat)
     raise NotImplementedError, "Implemented for 2D matrices only" unless self.dimensions==2 and mat.dimensions==2
     n = self.shape[0]
     raise NotImplementedError, "Both matrices must have the same number of rows" unless n==mat.shape[0]
     m = self.shape[1]*mat.shape[1]
-    khrao_prod = NMatrix.new([n,m], dtype: :float64)
+    prod_dtype = NMatrix.upcast(self.dtype, mat.dtype)
+    khrao_prod = NMatrix.new([n,m], dtype: prod_dtype)
     (0...n).each do |i|
-      kr_prod = self.row(i).kron_prod_1D mat.row(i)
-      khrao_prod[i,0...m] = kr_prod
+      kronecker_prod = self.row(i).kron_prod_1D mat.row(i)
+      khrao_prod[i,0...m] = kronecker_prod
     end
     return khrao_prod
   end
@@ -66,6 +67,8 @@ class NMatrix
   # x = a.solve(b)
   #
   def matrix_valued_solve(rhs_mat)
+    # This is a workaround. See NMatrix issue:
+    # https://github.com/SciRuby/nmatrix/issues/374
     rhs_mat_t = rhs_mat.transpose
     lhs_mat = self.clone
     NMatrix::LAPACK::clapack_gesv(:row, lhs_mat.shape[0], rhs_mat.shape[1], 

@@ -24,6 +24,7 @@ class LMM
   # * +x+              - fixed effects model matrix as a dense NMatrix
   # * +y+              - response vector as a nx1 dense NMatrix
   # * +zt+             - transpose of the random effects model matrix as a dense NMatrix
+  # TODO: lambdat is probably unnecessary
   # * +lambdat+        - upper triangular Cholesky factor of the relative 
   #                      covariance matrix of the random effects; a dense NMatrix
   # * +weights+        - optional Array of prior weights
@@ -43,7 +44,7 @@ class LMM
   #                      more detail
   # * +max_iterations+ - the maximum number of iterations for the optimization algorithm
   # * +thfun+          - a block or +Proc+ object that takes a value of +theta+ and produces
-  #                      the non-zero elements of +Lambdat+.  The structure of +Lambdat+
+  #                      the non-zero elements of +lambdat+.  The structure of +lambdat+
   #                      cannot change, only the numerical values.
   # === References
   # 

@@ -101,6 +101,7 @@ module MixedModels
   end
 
   def MixedModels.lmm_variable(x)
+    raise(ArgumentError, "Variable name must by a Symbol") unless x.is_a? Symbol
     LMMFormula.new([x])
   end
 end
