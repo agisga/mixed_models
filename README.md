@@ -1,11 +1,11 @@
-# MixedModels
+# mixed_models
 
 Fit statistical linear models with fixed and mixed (random) effects in Ruby.
 
 
 **Very early stage work in progress.**
 
-<!-- Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/MixedModels`. To experiment with that code, run `bin/console` for an interactive prompt.
+<!-- Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/mixed_models`. To experiment with that code, run `bin/console` for an interactive prompt.
 
 TODO: Delete this and the text above, and describe your gem
 
@@ -14,7 +14,7 @@ TODO: Delete this and the text above, and describe your gem
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'MixedModels'
+gem 'mixed_models'
 ```
 And then execute:
 
@@ -22,7 +22,7 @@ And then execute:
 
 Or install it yourself as:
 
-    $ gem install MixedModels
+    $ gem install mixed_models
 
 ## Usage
 
@@ -36,7 +36,7 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-1. Fork it ( https://github.com/[my-github-username]/MixedModels/fork )
+1. Fork it ( https://github.com/[my-github-username]/mixed_models/fork )
 2. Create your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
