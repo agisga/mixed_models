@@ -1,4 +1,4 @@
-require 'MixedModels'
+require 'mixed_models'
 
 describe Daru::DataFrame do
   context "#interaction_df_with" do

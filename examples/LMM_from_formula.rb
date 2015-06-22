@@ -1,4 +1,4 @@
-require 'MixedModels'
+require 'mixed_models'
 
 ##############################################################################
 # Model with numerical and categorical variables as fixed and random effects # 

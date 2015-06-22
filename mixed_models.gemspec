@@ -1,11 +1,11 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'MixedModels/version'
+require 'mixed_models/version'
 
 Gem::Specification.new do |spec|
   spec.name          = "mixed_models"
-  spec.version       = mixed_models::VERSION
+  spec.version       = MixedModels::VERSION
   spec.authors       = ["agisga"]
   spec.email         = ["alexej.go@googlemail.com"]
 

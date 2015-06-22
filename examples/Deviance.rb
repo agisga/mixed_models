@@ -1,4 +1,4 @@
-require 'MixedModels'
+require 'mixed_models'
 
 # Generate the fixed effects design matrix
 x_array = Array.new(50) { 1 }

@@ -1,4 +1,4 @@
-require 'MixedModels'
+require 'mixed_models'
 
 #########################################################################
 # Model with numerical variables only; random intercept and slope #######

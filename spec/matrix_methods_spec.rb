@@ -1,4 +1,4 @@
-require 'MixedModels'
+require 'mixed_models'
 
 ALL_DTYPES = [:byte,:int8,:int16,:int32,:int64, :float32,:float64, :object,
   :rational32,:rational64,:rational128, :complex64, :complex128]

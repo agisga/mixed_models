@@ -1,4 +1,4 @@
-require 'MixedModels'
+require 'mixed_models'
 
 require 'distribution'
 rand_norm = Distribution::Normal.rng(0,1)

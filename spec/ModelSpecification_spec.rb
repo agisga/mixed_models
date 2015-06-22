@@ -1,4 +1,4 @@
-require 'MixedModels'
+require 'mixed_models'
 
 RSpec.describe MixedModels do
   context "with mk_ran_ef_model_matrix" do

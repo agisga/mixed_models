@@ -1,4 +1,4 @@
 source 'https://rubygems.org'
 
-# Specify your gem's dependencies in MixedModels.gemspec
+# Specify your gem's dependencies in mixed_models.gemspec
 gemspec

@@ -1,4 +1,4 @@
-require 'MixedModels'
+require 'mixed_models'
 
 RSpec.describe MixedModels::NelderMead do
   context "when unconstrained" do
