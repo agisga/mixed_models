@@ -4,8 +4,8 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'MixedModels/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = "MixedModels"
-  spec.version       = MixedModels::VERSION
+  spec.name          = "mixed_models"
+  spec.version       = mixed_models::VERSION
   spec.authors       = ["agisga"]
   spec.email         = ["alexej.go@googlemail.com"]
 
