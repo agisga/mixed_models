@@ -176,20 +176,28 @@ class LMM
           "(e.g. (Days || Subj) is equivalent to (1 | Subj) + (0 + Days | Subj))") if formula.include? "||"
     raise(NotImplementedError, "The notation -1 in not supported." +
           "Use 0 instead, in order to denote the exclusion of an intercept term.") if formula.include? "-1"
+    raise(ArgumentError, "Cannot have a variable named 'intercept'." +
+          "If you want to include an intercept term use '1'." +
+          "If you want to exclude an intercept term use '0'.") if formula.include? "intercept"
+    raise(ArgumentError, "formula must contain a '~' symbol") unless formula.include? "~"
     #remove whitespaces
     formula.gsub!(%r{\s+}, "")
     # replace ":" with "*", because the LMMFormula class requires this convention
     formula.gsub!(":", "*")
-    # deal with the intercept (LMM#from_daru handles the case when both, intercept and 
-    # no_intercept, are included)
+    # deal with the intercept: "intercept" is added to any model specification as a fixed and a random effect;
+    # if a "0" term is specified as a fixed or random effect, then "no_intercept" will be included in the formula;
+    # later, LMM#from_daru handles the case when both, "intercept" and "no_intercept", are specified.
     formula.gsub!("~", "~intercept+")
     formula.gsub!("(", "(intercept+")
     formula.gsub!("+1", "")
     formula.gsub!("+0", "+no_intercept")
     # extract the response and right hand side
     split = formula.split "~"
-    response = split[0].strip.to_sym
+    response = split[0].strip
+    raise(ArgumentError, "The left hand side of formula cannot be empty") if response.empty?
+    response = response.to_sym
     rhs = split[1] 
+    raise(ArgumentError, "The right hand side of formula cannot be empty") if rhs.split.empty?
     # get all variable names from rhs
     vars = rhs.split %r{\s*[+|()*]\s*}
     vars.delete("")
@@ -199,26 +207,21 @@ class LMM
     # substitute "name" with "MixedModels::lmm_variable(name)" only if it is surrounded by white 
     # spaces; this trick is used to ensure that for example the variable "a" is not found within 
     # the variable "year"
-    rhs.gsub!("+", " + ")
-    rhs.gsub!("*", " * ")
-    rhs.gsub!("|", " | ")
-    rhs.gsub!("(", " ( ")
-    rhs.gsub!(")", " ) ")
-    rhs = " " + rhs + " "
-    vars.each { |name| rhs.gsub!(" " + name + " ", "MixedModels::lmm_variable(:" + name + ")") } 
+    rhs.gsub!(%r{([+*|()])}, ' \1 ')
+    rhs = " #{rhs} "
+    vars.each { |name| rhs.gsub!(" #{name} ", "MixedModels::lmm_variable(#{name.to_sym.inspect})") } 
     # generate an LMMFormula
     rhs_lmm_formula = eval(rhs)
     #fit the model
     rhs_input = rhs_lmm_formula.to_input_for_lmm_from_daru
-    model = LMM.from_daru(response: response, 
-                          fixed_effects: rhs_input[:fixed_effects],
-                          random_effects: rhs_input[:random_effects], 
-                          grouping: rhs_input[:grouping],
-                          data: data, 
-                          weights: weights, offset: offset, reml: reml, 
-                          start_point: start_point, epsilon: epsilon, 
-                          max_iterations: max_iterations)
-    return model
+    return LMM.from_daru(response: response, 
+                         fixed_effects: rhs_input[:fixed_effects],
+                         random_effects: rhs_input[:random_effects], 
+                         grouping: rhs_input[:grouping],
+                         data: data, 
+                         weights: weights, offset: offset, reml: reml, 
+                         start_point: start_point, epsilon: epsilon, 
+                         max_iterations: max_iterations)
   end
 
   # Fit and store a linear mixed effects model from data supplied as Daru::DataFrame.
