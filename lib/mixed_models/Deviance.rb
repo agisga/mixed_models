@@ -22,8 +22,11 @@ module MixedModels
   #   "Fitting Linear Mixed - Effects Models using lme4". arXiv:1406.5823v1 [stat.CO]. 2014.
   #  
   def MixedModels.mk_lmm_dev_fun(d, reml)
-    df = d.n                                        # degrees of freedom (depends on REML)
-    df -= d.p if reml
+    df     = (reml ? (d.n - d.p) : d.n) # degrees of freedom (depends on REML)
+    cu     = NMatrix.new([d.q, 1], dtype: :float64)
+    rzx    = NMatrix.new([d.q, d.p], dtype: :float64)
+    wtres  = NMatrix.new([d.n, 1], dtype: :float64)
+    logdet = Float::INFINITY
 
     Proc.new do |theta|
       # (1) update the covariance factor +lambdat+ and the Cholesky factor +l+ 

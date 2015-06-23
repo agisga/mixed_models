@@ -42,7 +42,7 @@ class LMMData
     @x, @y, @zt, @lambdat, @weights, @offset, @thfun = x, y, zt, lambdat, weights, offset, thfun 
     @n, @p, @q = @y.shape[0], @x.shape[1], @zt.shape[0]
  
-    unless @x.shape[0]==@n and @zt.shape[1]==@n and @lambdat.shape[0]==@q and @lambdat.shape[1]==@q
+    unless @x.shape[0]==@n && @zt.shape[1]==@n && @lambdat.shape[0]==@q && @lambdat.shape[1]==@q
       raise ArgumentError, "Dimensions mismatch"
     end
 
