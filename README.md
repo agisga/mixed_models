@@ -1,18 +1,12 @@
-<<<<<<< HEAD
 # mixed_models
 
 Fit statistical linear models with fixed and mixed (random) effects in Ruby.
 
-
-**Very early stage work in progress.**
-
-<!-- Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/mixed_models`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+**Early stage work in progress.**
 
 ## Installation
 
-Add this line to your application's Gemfile:
+<!-- Add this line to your application's Gemfile:
 
 ```ruby
 gem 'mixed_models'
@@ -23,9 +17,29 @@ And then execute:
 
 Or install it yourself as:
 
-    $ gem install mixed_models
+    $ gem install mixed_models -->
 
-## Usage
+Ruby is required in version >=2.0 because keyword arguments are excessively used in `mixed_models`.
+Moreover, prior to the installation of `mixed_models`, currently the `NMatrix` gem needs to be installed in its development version from <https://github.com/SciRuby/nmatrix.git>.
+
+Then `mixed_models` can be installed using the command line:
+
+```
+git clone https://github.com/agisga/mixed_models.git
+cd mixed_models/
+bundle install
+rake install
+```
+
+Feel free to contact me at alexej [dot] go [at] googlemail [dot] com, in case of difficulties with the installation.
+
+## Some relevant BLOG posts
+
+* [Fitting linear mixed models with a user-friendly R-formula-like interface](http://agisga.github.io/MixedModels_from_formula/)
+
+* [A rudimentary linear mixed models fit from raw matrices and vectors](http://agisga.github.io/First-linear-mixed-model-fit/)
+
+<!-- ## Usage
 
 TODO: Write usage instructions here
 
@@ -34,6 +48,7 @@ TODO: Write usage instructions here
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `bin/console` for an interactive prompt that will allow you to experiment.
 
 To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release` to create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+-->
 
 ## Contributing
 
@@ -42,4 +57,3 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
 5. Create a new Pull Request
--->
