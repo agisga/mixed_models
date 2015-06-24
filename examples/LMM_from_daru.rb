@@ -69,7 +69,7 @@ puts "-------------------------------------------"
 # Model with numerical and categorical variables as fixed and random effects # 
 ##############################################################################
 
-df = Daru::DataFrame.from_csv '/home/alexej/github/MixedModels/examples/data/categorical_and_crossed_ran_ef.csv'
+df = Daru::DataFrame.from_csv './data/categorical_and_crossed_ran_ef.csv'
 
 # Fit the model
 #model_fit = LMM.from_daru(response: :y, fixed_effects: [:intercept, :x, :a], 
