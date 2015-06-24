@@ -14,7 +14,8 @@ require 'daru'
 class LMM
 
   attr_reader :reml, :theta_optimal, :dev_optimal, :dev_fun, :optimization_result, :model_data,
-              :sigma2, :sigma_mat, :fix_ef_cov_mat, :ran_ef_cov_mat, :sse, :fix_ef, :ran_ef
+              :sigma2, :sigma_mat, :fix_ef_cov_mat, :ran_ef_cov_mat, :sse, :fix_ef, :ran_ef,
+              :fix_ef_names, :ran_ef_names
 
   # Fit and store a linear mixed effects model according to the input from the user.
   # Parameter estimates are obtained by the method described in Bates et. al. (2014).
@@ -24,6 +25,10 @@ class LMM
   # * +x+              - fixed effects model matrix as a dense NMatrix
   # * +y+              - response vector as a nx1 dense NMatrix
   # * +zt+             - transpose of the random effects model matrix as a dense NMatrix
+  # * +x_col_names     - optional column names for the matrix +x+, i.e. the names of the fixed
+  #                      effects terms
+  # * +z_col_names     - optional column names for the matrix z, i.e. row names for the matrix
+  #                      +zt+, i.e. the names of the random effects terms
   # TODO: lambdat is probably unnecessary
   # * +lambdat+        - upper triangular Cholesky factor of the relative 
   #                      covariance matrix of the random effects; a dense NMatrix
@@ -51,9 +56,9 @@ class LMM
   # * Douglas Bates, Martin Maechler, Ben Bolker, Steve Walker, 
   #   "Fitting Linear Mixed - Effects Models using lme4". arXiv:1406.5823v1 [stat.CO]. 2014.
   #
-  def initialize(x:, y:, zt:, lambdat:, weights: nil, offset: 0.0, reml: true, 
-                 start_point:, lower_bound: nil, upper_bound: nil, epsilon: 1e-6, 
-                 max_iterations: 1e6, &thfun)
+  def initialize(x:, y:, zt:, x_col_names: nil, z_col_names: nil, lambdat:, weights: nil, 
+                 offset: 0.0, reml: true, start_point:, lower_bound: nil, upper_bound: nil, 
+                 epsilon: 1e-6, max_iterations: 1e6, &thfun) 
     @reml = reml
 
     ################################################
@@ -115,15 +120,23 @@ class LMM
     # Construct a Hash containing information about the estimated fixed effects 
     # coefficiants (these estimates are conditional on the estimated covariance parameters).
     @fix_ef = Hash.new
-    fix_ef_names = (0...@model_data.beta.shape[0]).map { |i| "x" + i.to_s }
-    fix_ef_names.each_with_index { |name, i| @fix_ef[name] = @model_data.beta[i] }
+    @fix_ef_names = if x_col_names.nil? then
+                      (0...@model_data.beta.shape[0]).map { |i| "x" + i.to_s } 
+                    else
+                      x_col_names
+                    end
+    @fix_ef_names.each_with_index { |name, i| @fix_ef[name] = @model_data.beta[i] }
     # TODO: store more info in fix_ef, such as p-values on 95%CI
     
     # Construct a Hash containing information about the estimated mean values of the 
     # random effects (these are conditional estimates which depend on the input data).
     @ran_ef = Hash.new
-    ran_ef_names = (0...@model_data.b.shape[0]).map { |i| "z" + i.to_s }
-    ran_ef_names.each_with_index { |name, i| @ran_ef[name] = @model_data.b[i] }
+    @ran_ef_names = if z_col_names.nil? then 
+                      (0...@model_data.b.shape[0]).map { |i| "z" + i.to_s }
+                    else
+                      z_col_names
+                    end
+    @ran_ef_names.each_with_index { |name, i| @ran_ef[name] = @model_data.b[i] }
     # TODO: store more info in ran_ef, such as p-values on 95%CI
   end
 
@@ -276,6 +289,14 @@ class LMM
   # * +max_iterations+ - optional, the maximum number of iterations for the optimization 
   #                      algorithm
   #
+  # === Usage
+  #
+  #   df = Daru::DataFrame.from_csv './data/alien_species.csv'
+  #   model_fit = LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", data: df)
+  #    
+  #   model_fit.fix_ef # => {:intercept=>1016.2867207696775, :Age=>-0.06531615343468071, :Species_lvl_Human=>-499.69369529020906, :Species_lvl_Ood=>-899.569321353577, :Species_lvl_WeepingAngel=>-199.58895804200768}
+  #   model_fit.ran_ef # => {:intercept_Asylum=>-116.68080682806713, :Age_Asylum=>-0.03353391213061963, :intercept_Earth=>83.86571630094411, :Age_Earth=>-0.1361399664446193, :intercept_OodSphere=>32.81508992422786, :Age_OodSphere=>0.1696738785983933}
+  #
   def LMM.from_daru(response:, fixed_effects:, random_effects:, grouping:, data:,
                     weights: nil, offset: 0.0, reml: true, start_point: nil,
                     epsilon: 1e-6, max_iterations: 1e6)
@@ -376,8 +397,9 @@ class LMM
     data[:intercept] = Array.new(n) {1.0}
 
     # construct the fixed effects design matrix
-    x_frame = data[*fixed_effects]
-    x = x_frame.to_nm
+    x_frame     = data[*fixed_effects]
+    x           = x_frame.to_nm
+    x_col_names = fixed_effects # column names of the x matrix
 
     # construct the random effects model matrix and covariance function 
     num_groups = grouping.length
@@ -393,8 +415,10 @@ class LMM
       num_ran_ef[i] = ran_ef_raw_mat[i].shape[1]
       num_grp_levels[i] = ran_ef_grp[i].uniq.length
     end
-    z     = MixedModels::mk_ran_ef_model_matrix(ran_ef_raw_mat, ran_ef_grp)
-    thfun = MixedModels::mk_ran_ef_cov_fun(num_ran_ef, num_grp_levels)
+    z_result_hash = MixedModels::mk_ran_ef_model_matrix(ran_ef_raw_mat, ran_ef_grp, random_effects)
+    z             = z_result_hash[:z] 
+    z_col_names   = z_result_hash[:names] # column names of the z matrix
+    thfun         = MixedModels::mk_ran_ef_cov_fun(num_ran_ef, num_grp_levels)
 
     # define the starting point for the optimization (if it's nil),
     # such that random effects are independent with variances equal to one
@@ -413,6 +437,7 @@ class LMM
 
     # fit the model
     lmmfit = LMM.new(x: x, y: y, zt: z.transpose, lambdat: lambdat, 
+                     x_col_names: x_col_names, z_col_names: z_col_names,
                      weights: weights, offset: offset, 
                      reml: reml, start_point: start_point, 
                      lower_bound: lower_bound, epsilon: epsilon, 

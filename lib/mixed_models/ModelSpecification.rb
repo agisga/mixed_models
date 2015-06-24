@@ -7,12 +7,14 @@ module MixedModels
   #
   # === Arguments
   #
-  # * +x+   - Array of NMatrix objects. Each matrix +x[i]+ contains the covariates
-  #           for a group of random effects with a common grouping structure.
-  #           Typically, a given +x[i]+ contains correlated random effects, and the
-  #           random effects from different matrices +x[i]+ are modeled as uncorrelated.  
-  # * +grp+ - Array of Arrays. Each +grp[i]+ has length equal to the number of rows in +x[i]+,
-  #           and specifies which observations in +x[i]+ correspond to which group.
+  # * +x+     - Array of NMatrix objects. Each matrix +x[i]+ contains the covariates
+  #             for a group of random effects with a common grouping structure.
+  #             Typically, a given +x[i]+ contains correlated random effects, and the
+  #             random effects from different matrices +x[i]+ are modeled as uncorrelated.  
+  # * +grp+   - Array of Arrays. Each +grp[i]+ has length equal to the number of rows in +x[i]+,
+  #             and specifies which observations in +x[i]+ correspond to which group.
+  # * +names+ - (Optional) Array of Arrays, where the i'th Array contains the column names
+  #             of the +x[i]+ matrix, i.e. the names of the corresponding random effects terms.
   #
   # === References
   # 
@@ -24,7 +26,7 @@ module MixedModels
   # grp = Array[["grp1", "grp1", 2, 2, "grp3", "grp3"]]
   # x1  = NMatrix.new([6,2], [1,-1,1,1,1,-1,1,1,1,-1,1,1], dtype: :float64)
   # x   = Array[x1]
-  # z   = MixedModels::mk_ran_ef_model_matrix(x, grp)
+  # z   = MixedModels::mk_ran_ef_model_matrix(x, grp)[:z]
   #         # => 
   #           [
   #             [1.0, -1.0, 0.0,  0.0, 0.0,  0.0]
@@ -35,26 +37,67 @@ module MixedModels
   #             [0.0,  0.0, 0.0,  0.0, 1.0,  1.0]
   #           ]
   #
-  def MixedModels.mk_ran_ef_model_matrix(x, grp)
+  def MixedModels.mk_ran_ef_model_matrix(x, grp, names=nil)
     num_x = x.length  # number of raw random effects matrices
-    raise(ArgumentError, "Number of X matrices different than the number of grouping structures") unless num_x = grp.length
+    raise(ArgumentError, "Number of X matrices different than the number of grouping structures") unless num_x == grp.length
+    unless names.nil? || num_x == names.length
+      raise(ArgumentError, "Number of X matrices different than the number of Arrays of column names")
+    end
     n = x[0].shape[0] # number of observations in each matrix x[i]
 
-    z = Array.new
-    z_ncol  = 0
+    z           = Array.new # Array of matrices where z[i] correponds to x[i] and grp[i]
+    z_col_names = Array.new # Array whose i'th entry is an Array of column names of z[i]
+    z_ncol      = 0 # Number of columns in the ran ef model matrix
     (0...num_x).each do |i|
       grp_levels = grp[i].uniq
-      m          = grp_levels.length 
+      
+      # sort the levels if possible
+      begin
+        grp_levels.sort!
+      rescue
+        grp_levels = grp[i].uniq
+      end
+
+      m = grp_levels.length 
+      # generate a 0-1-valued matrix specifying the group memberships for each subject
       grp_mat    = NMatrix.zeros([n,m], dtype: :float64)
       (0...m).each do |j|
         (0...n).each do |k|
           grp_mat[k,j] = (grp[i][k] == grp_levels[j] ? 1.0 : 0.0)
         end
       end
+
+      # the random effects model matrix for the i'th grouping structure
       z[i] = grp_mat.khatri_rao_rows x[i]
       z_ncol += z[i].shape[1] 
+
+      # create the column names for z[i]
+      # Specific names are produced from Numeric, String or Symbol only, otherwise
+      # codes based on indices are used. The names are saved as Symbols for consistency,
+      # as the names of the fixed effect terms are Symbols as well. 
+      z_col_names[i] = Array.new
+      unless names.nil? then 
+        grp_levels.each_with_index do |lvl, j|
+          names[i].each_with_index do |term, k|
+            if term.is_a?(Numeric) || term.is_a?(String) || term.is_a?(Symbol) then 
+              if lvl.is_a?(Numeric) || lvl.is_a?(String) || lvl.is_a?(Symbol) then 
+                z_col_names[i].push "#{term}_#{lvl}".to_sym
+              else
+                z_col_names[i].push "#{term}_grp#{i}_#{j}".to_sym
+              end
+            else
+              if lvl.is_a?(Numeric) || lvl.is_a?(String) || lvl.is_a?(Symbol) then 
+                z_col_names[i].push "x#{i}_#{k}_#{lvl}".to_sym
+              else
+                z_col_names[i].push "x#{i}_#{k}_grp#{i}_#{j}".to_sym
+              end
+            end
+          end
+        end
+      end
     end
 
+    # concatenate the matrices z[i]
     z_model_mat = NMatrix.new([n, z_ncol], dtype: :float64)
     start_index = 0
     end_index   = 0
@@ -63,8 +106,10 @@ module MixedModels
       z_model_mat[0...n, start_index...end_index] = zi
       start_index += zi.shape[1]
     end
+    # concatenate the Arrays z_col_names[i]
+    z_model_mat_names = z_col_names.flatten
     
-    return z_model_mat
+    return {z: z_model_mat, names: z_model_mat_names}
   end
 
   # Generate a Proc object which parametrizes the transpose of the random effects covariance 

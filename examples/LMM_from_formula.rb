@@ -13,3 +13,5 @@ puts "REML criterion: \t#{model_fit.dev_optimal}"
 puts "Fixed effects:"
 puts model_fit.fix_ef
 puts "Standard deviation: \t#{Math::sqrt(model_fit.sigma2)}"
+puts "Random effects:"
+puts model_fit.ran_ef

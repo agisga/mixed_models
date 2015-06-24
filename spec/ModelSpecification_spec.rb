@@ -6,7 +6,7 @@ RSpec.describe MixedModels do
       x1  = NMatrix.new([6,2], [1,-1,1,1,1,-1,1,1,1,-1,1,1], dtype: :float64)
       x   = Array[x1]
       grp = Array[["grp1", "grp1", 2, 2, "grp3", "grp3"]]
-      z   = MixedModels::mk_ran_ef_model_matrix(x, grp)
+      z   = MixedModels::mk_ran_ef_model_matrix(x, grp)[:z]
       expect(z).to eq(NMatrix.new([6,6], [1.0, -1.0, 0.0,  0.0, 0.0,  0.0,
                                           1.0,  1.0, 0.0,  0.0, 0.0,  0.0,
                                           0.0,  0.0, 1.0, -1.0, 0.0,  0.0,
@@ -20,7 +20,7 @@ RSpec.describe MixedModels do
       x2  = NMatrix.new([6,1], [1,1,1,1,1,1], dtype: :float64)
       x   = Array[x1, x2]
       grp = Array[["grp1", "grp1", 2, 2, "grp3", "grp3"], [1,1,1,2,2,2]]
-      z   = MixedModels::mk_ran_ef_model_matrix(x, grp)
+      z   = MixedModels::mk_ran_ef_model_matrix(x, grp)[:z]
       expect(z).to eq(NMatrix.new([6,8], [1.0, -1.0, 0.0,  0.0, 0.0,  0.0, 1.0, 0.0,
                                           1.0,  1.0, 0.0,  0.0, 0.0,  0.0, 1.0, 0.0,
                                           0.0,  0.0, 1.0, -1.0, 0.0,  0.0, 1.0, 0.0,
@@ -35,13 +35,23 @@ RSpec.describe MixedModels do
       x3  = NMatrix.new([6,2], [1,1,1,2,1,3,1,4,1,5,1,6], dtype: :float64)
       x   = Array[x1, x2, x3]
       grp = Array[["grp1", "grp1", 2, 2, "grp3", "grp3"], [1,1,1,2,2,2], ['a','b','c','a','b','c']]
-      z   = MixedModels::mk_ran_ef_model_matrix(x, grp)
+      z   = MixedModels::mk_ran_ef_model_matrix(x, grp)[:z]
       expect(z).to eq(NMatrix.new([6,14], [1.0, -1.0, 0.0,  0.0, 0.0,  0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0,
                                            1.0,  1.0, 0.0,  0.0, 0.0,  0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 2.0, 0.0, 0.0,
                                            0.0,  0.0, 1.0, -1.0, 0.0,  0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 3.0,
                                            0.0,  0.0, 1.0,  1.0, 0.0,  0.0, 0.0, 1.0, 1.0, 4.0, 0.0, 0.0, 0.0, 0.0,
                                            0.0,  0.0, 0.0,  0.0, 1.0, -1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 5.0, 0.0, 0.0,
                                            0.0,  0.0, 0.0,  0.0, 1.0,  1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 6.0], dtype: :float64))
+    end
+
+    it "generates random effects model matrix column names with mk_ran_ef_model_matrix" do
+      x1          = NMatrix.new([6,2], [1,-1,1,1,1,-1,1,1,1,-1,1,1], dtype: :float64)
+      x2          = NMatrix.new([6,1], [1,1,1,1,1,1], dtype: :float64)
+      x           = Array[x1, x2]
+      x_col_names = Array[["A", 1], [:B]]
+      grp         = Array[["grp1", "grp1", 2, 2, :grp3, :grp3], [1,1,1,2,2,2]]
+      z_names     = MixedModels::mk_ran_ef_model_matrix(x, grp, x_col_names)[:names]
+      expect(z_names).to eq([:A_grp1, :"1_grp1", :A_2, :"1_2", :A_grp3, :"1_grp3", :B_1, :B_2])
     end
   end
 
