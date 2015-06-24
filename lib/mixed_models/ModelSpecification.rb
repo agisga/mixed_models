@@ -4,6 +4,7 @@ module MixedModels
   # y = X*beta + Z*b + epsilon,
   # from the matrices +x[i]+, which contain the the covariates for random effects
   # with a common grouping structure given as +grp[i]+.
+  # Optionally, an Array of column names for the matrix Z is generated as well.
   #
   # === Arguments
   #
@@ -15,6 +16,12 @@ module MixedModels
   #             and specifies which observations in +x[i]+ correspond to which group.
   # * +names+ - (Optional) Array of Arrays, where the i'th Array contains the column names
   #             of the +x[i]+ matrix, i.e. the names of the corresponding random effects terms.
+  #
+  # === Returns
+  #
+  # A Hash containing the random effects model matrix Z under the key +:z+, and if the argument 
+  # +names+ was provided then also an Array of column names under key +:names+. If no argument
+  # was provided for +names+, then the returned Hash contains +nil+ under key +:names+. 
   #
   # === References
   # 
@@ -107,7 +114,7 @@ module MixedModels
       start_index += zi.shape[1]
     end
     # concatenate the Arrays z_col_names[i]
-    z_model_mat_names = z_col_names.flatten
+    z_model_mat_names = (z_col_names.empty? ? nil : z_col_names.flatten)
     
     return {z: z_model_mat, names: z_model_mat_names}
   end

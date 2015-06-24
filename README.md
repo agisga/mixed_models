@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # mixed_models
 
 Fit statistical linear models with fixed and mixed (random) effects in Ruby.

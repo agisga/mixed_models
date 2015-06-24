@@ -25,14 +25,14 @@ class LMM
   # * +x+              - fixed effects model matrix as a dense NMatrix
   # * +y+              - response vector as a nx1 dense NMatrix
   # * +zt+             - transpose of the random effects model matrix as a dense NMatrix
-  # * +x_col_names     - optional column names for the matrix +x+, i.e. the names of the fixed
+  # * +x_col_names     - (Optional) column names for the matrix +x+, i.e. the names of the fixed
   #                      effects terms
-  # * +z_col_names     - optional column names for the matrix z, i.e. row names for the matrix
+  # * +z_col_names     - (Optional) column names for the matrix z, i.e. row names for the matrix
   #                      +zt+, i.e. the names of the random effects terms
   # TODO: lambdat is probably unnecessary
   # * +lambdat+        - upper triangular Cholesky factor of the relative 
   #                      covariance matrix of the random effects; a dense NMatrix
-  # * +weights+        - optional Array of prior weights
+  # * +weights+        - (Optional) Array of prior weights
   # * +offset+         - an optional vector of offset terms which are known 
   #                      a priori; a nx1 NMatrix
   # * +reml+           - if true than the profiled REML criterion will be used as the objective
