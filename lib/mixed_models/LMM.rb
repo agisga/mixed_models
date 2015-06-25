@@ -14,7 +14,7 @@ require 'daru'
 class LMM
 
   attr_reader :reml, :theta_optimal, :dev_optimal, :dev_fun, :optimization_result, :model_data,
-              :sigma2, :sigma_mat, :fix_ef_cov_mat, :ran_ef_cov_mat, :sse, :fix_ef, :ran_ef,
+              :sigma2, :sigma, :sigma_mat, :fix_ef_cov_mat, :ran_ef_cov_mat, :sse, :fix_ef, :ran_ef,
               :fix_ef_names, :ran_ef_names
 
   # Fit and store a linear mixed effects model according to the input from the user.
@@ -93,14 +93,16 @@ class LMM
     @sse = 0.0
     self.residuals.each { |r| @sse += r**2 }
 
-    # scale parameter of the covariance (the residuals conditional on the random 
+    # scale parameter of the covariance; the residuals conditional on the random 
     # effects have variances "sigma2*weights^(-1)"; if all weights are ones then 
-    # sigma2 is an estimate of the residual variance)
+    # sigma2 is an estimate of the residual variance
     @sigma2 = if reml then
                @model_data.pwrss / (@model_data.n - @model_data.p)
              else
                @model_data.pwrss / @model_data.n
              end
+    # square root of sigma2; the residual standard deviation if all weights are one
+    @sigma = Math::sqrt(@sigma2)
 
     # estimate of the covariance matrix Sigma of the random effects vector b,
     # where b ~ N(0, Sigma).
@@ -194,10 +196,12 @@ class LMM
           "If you want to include an intercept term use '1'." +
           "If you want to exclude an intercept term use '0'.") if formula.include? "intercept"
     raise(ArgumentError, "formula must contain a '~' symbol") unless formula.include? "~"
-    #remove whitespaces
+
+    # remove whitespaces
     formula.gsub!(%r{\s+}, "")
     # replace ":" with "*", because the LMMFormula class requires this convention
     formula.gsub!(":", "*")
+
     # deal with the intercept: "intercept" is added to any model specification as a fixed and a random effect;
     # if a "0" term is specified as a fixed or random effect, then "no_intercept" will be included in the formula;
     # later, LMM#from_daru handles the case when both, "intercept" and "no_intercept", are specified.
@@ -205,6 +209,7 @@ class LMM
     formula.gsub!("(", "(intercept+")
     formula.gsub!("+1", "")
     formula.gsub!("+0", "+no_intercept")
+
     # extract the response and right hand side
     split = formula.split "~"
     response = split[0].strip
@@ -212,10 +217,12 @@ class LMM
     response = response.to_sym
     rhs = split[1] 
     raise(ArgumentError, "The right hand side of formula cannot be empty") if rhs.split.empty?
+
     # get all variable names from rhs
     vars = rhs.split %r{\s*[+|()*]\s*}
     vars.delete("")
     vars.uniq!
+
     # In the String rhs, wrap each variable name "foo" in "MixedModels::lmm_variable(:foo)":
     # Put whitespaces around symbols "+", "|", "*", "(" and ")", and then
     # substitute "name" with "MixedModels::lmm_variable(name)" only if it is surrounded by white 
@@ -224,8 +231,10 @@ class LMM
     rhs.gsub!(%r{([+*|()])}, ' \1 ')
     rhs = " #{rhs} "
     vars.each { |name| rhs.gsub!(" #{name} ", "MixedModels::lmm_variable(#{name.to_sym.inspect})") } 
-    # generate an LMMFormula
+
+    # generate an LMMFormula of the right hand side
     rhs_lmm_formula = eval(rhs)
+
     #fit the model
     rhs_input = rhs_lmm_formula.to_input_for_lmm_from_daru
     return LMM.from_daru(response: response, 

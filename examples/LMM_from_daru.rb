@@ -72,15 +72,15 @@ puts "-------------------------------------------"
 df = Daru::DataFrame.from_csv './data/categorical_and_crossed_ran_ef.csv'
 
 # Fit the model
-#model_fit = LMM.from_daru(response: :y, fixed_effects: [:intercept, :x, :a], 
-#                          random_effects: [[:intercept, :x], [:intercept, :a]], 
-#                          grouping: [:grp_for_x, :grp_for_a],
-#                          data: df)
-
 model_fit = LMM.from_daru(response: :y, fixed_effects: [:intercept, :x, :a], 
-                          random_effects: [[:intercept, :x]], 
-                          grouping: [:grp_for_x],
+                          random_effects: [[:intercept, :x], [:intercept, :a]], 
+                          grouping: [:grp_for_x, :grp_for_a],
                           data: df)
+
+#model_fit = LMM.from_daru(response: :y, fixed_effects: [:intercept, :x, :a], 
+#                          random_effects: [[:intercept, :x]], 
+#                          grouping: [:grp_for_x],
+#                          data: df)
 
 # Print some results
 puts "\n-------------------------------------------"
@@ -89,6 +89,8 @@ puts "-------------------------------------------"
 puts "REML criterion: \t#{model_fit.dev_optimal}"
 puts "Fixed effects:"
 puts model_fit.fix_ef
+puts "Random effects:"
+puts model_fit.ran_ef
 puts "Variance: \t#{model_fit.sigma2}"
 puts "Standard deviation: \t#{Math::sqrt(model_fit.sigma2)}"
 puts "-------------------------------------------"
