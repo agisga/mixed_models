@@ -29,9 +29,6 @@ class LMM
   #                      effects terms
   # * +z_col_names     - (Optional) column names for the matrix z, i.e. row names for the matrix
   #                      +zt+, i.e. the names of the random effects terms
-  # TODO: lambdat is probably unnecessary
-  # * +lambdat+        - upper triangular Cholesky factor of the relative 
-  #                      covariance matrix of the random effects; a dense NMatrix
   # * +weights+        - (Optional) Array of prior weights
   # * +offset+         - an optional vector of offset terms which are known 
   #                      a priori; a nx1 NMatrix
@@ -48,15 +45,17 @@ class LMM
   #                      of the optimization algorithm; see the respective documentation for 
   #                      more detail
   # * +max_iterations+ - the maximum number of iterations for the optimization algorithm
-  # * +thfun+          - a block or +Proc+ object that takes a value of +theta+ and produces
-  #                      the non-zero elements of +lambdat+.  The structure of +lambdat+
-  #                      cannot change, only the numerical values.
+  # * +thfun+          - a block or +Proc+ object that takes in an Array +theta+ and produces
+  #                      the non-zero elements of the dense NMatrix +lambdat+, which is the upper 
+  #                      triangular Cholesky factor of the relative covariance matrix of the random 
+  #                      effects. The structure of +lambdat+ cannot change, only the numerical values.
+  #
   # === References
   # 
   # * Douglas Bates, Martin Maechler, Ben Bolker, Steve Walker, 
   #   "Fitting Linear Mixed - Effects Models using lme4". arXiv:1406.5823v1 [stat.CO]. 2014.
   #
-  def initialize(x:, y:, zt:, x_col_names: nil, z_col_names: nil, lambdat:, weights: nil, 
+  def initialize(x:, y:, zt:, x_col_names: nil, z_col_names: nil, weights: nil, 
                  offset: 0.0, reml: true, start_point:, lower_bound: nil, upper_bound: nil, 
                  epsilon: 1e-6, max_iterations: 1e6, &thfun) 
     @reml = reml
@@ -66,7 +65,8 @@ class LMM
     ################################################
 
     # (1) Create the data structure in a LMMData object
-    @model_data = LMMData.new(x: x, y: y, zt: zt, lambdat: lambdat, 
+    lambdat_ini = thfun.call(start_point) #initial estimate of +lambdat+
+    @model_data = LMMData.new(x: x, y: y, zt: zt, lambdat: lambdat_ini, 
                               weights: weights, offset: offset, &thfun)
     
     # (2) Set up the profiled deviance/REML function
@@ -178,6 +178,15 @@ class LMM
   #                      documentation for more detail
   # * +max_iterations+ - optional, the maximum number of iterations for the optimization 
   #                      algorithm
+  #
+  # === Usage
+  #
+  #   df = Daru::DataFrame.from_csv './data/alien_species.csv'
+  #   model_fit = LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", data: df)
+  #    
+  #   # Print some results:
+  #   model_fit.fix_ef # => {:intercept=>1016.2867207696775, :Age=>-0.06531615343468071, :Species_lvl_Human=>-499.69369529020906, :Species_lvl_Ood=>-899.569321353577, :Species_lvl_WeepingAngel=>-199.58895804200768}
+  #   model_fit.ran_ef # => {:intercept_Asylum=>-116.68080682806713, :Age_Asylum=>-0.03353391213061963, :intercept_Earth=>83.86571630094411, :Age_Earth=>-0.1361399664446193, :intercept_OodSphere=>32.81508992422786, :Age_OodSphere=>0.1696738785983933}
   #
   def LMM.from_formula(formula:, data:, weights: nil, offset: 0.0, reml: true, 
                        start_point: nil, epsilon: 1e-6, max_iterations: 1e6)
@@ -300,11 +309,15 @@ class LMM
   #
   # === Usage
   #
-  #   df = Daru::DataFrame.from_csv './data/alien_species.csv'
-  #   model_fit = LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", data: df)
-  #    
-  #   model_fit.fix_ef # => {:intercept=>1016.2867207696775, :Age=>-0.06531615343468071, :Species_lvl_Human=>-499.69369529020906, :Species_lvl_Ood=>-899.569321353577, :Species_lvl_WeepingAngel=>-199.58895804200768}
-  #   model_fit.ran_ef # => {:intercept_Asylum=>-116.68080682806713, :Age_Asylum=>-0.03353391213061963, :intercept_Earth=>83.86571630094411, :Age_Earth=>-0.1361399664446193, :intercept_OodSphere=>32.81508992422786, :Age_OodSphere=>0.1696738785983933}
+  #  df = Daru::DataFrame.from_csv './data/categorical_and_crossed_ran_ef.csv'
+  #  model_fit = LMM.from_daru(response: :y, fixed_effects: [:intercept, :x, :a], 
+  #                            random_effects: [[:intercept, :x], [:intercept, :a]], 
+  #                            grouping: [:grp_for_x, :grp_for_a],
+  #                            data: df)
+  #  # Print some results:
+  #  model_fit.dev_optimal # =>	342.7659264122803
+  #  model_fit.fix_ef # => {:intercept=>10.146249586724727, :x=>0.6565521213078758, :a_lvl_b=>-4.4565184869223415, :a_lvl_c=>-0.6298761634372705, :a_lvl_d=>-2.9308041789327985, :a_lvl_e=>-1.342758616430962}
+  #  model_fit.sigma # =>	0.9459691325482149
   #
   def LMM.from_daru(response:, fixed_effects:, random_effects:, grouping:, data:,
                     weights: nil, offset: 0.0, reml: true, start_point: nil,
@@ -437,7 +450,6 @@ class LMM
       tmp2 = Array.new(q*(q-1)/2) {0.0}
       start_point = tmp1 + tmp2
     end
-    lambdat = thfun.call(start_point)
 
     # set the lower bound on the variance-covariance parameters
     tmp1 = Array.new(q) {0.0}
@@ -445,7 +457,7 @@ class LMM
     lower_bound = tmp1 + tmp2
 
     # fit the model
-    lmmfit = LMM.new(x: x, y: y, zt: z.transpose, lambdat: lambdat, 
+    lmmfit = LMM.new(x: x, y: y, zt: z.transpose,
                      x_col_names: x_col_names, z_col_names: z_col_names,
                      weights: weights, offset: offset, 
                      reml: reml, start_point: start_point, 

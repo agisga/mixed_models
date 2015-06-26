@@ -72,6 +72,7 @@ puts "-------------------------------------------"
 df = Daru::DataFrame.from_csv './data/categorical_and_crossed_ran_ef.csv'
 
 # Fit the model
+# This is really slow
 model_fit = LMM.from_daru(response: :y, fixed_effects: [:intercept, :x, :a], 
                           random_effects: [[:intercept, :x], [:intercept, :a]], 
                           grouping: [:grp_for_x, :grp_for_a],

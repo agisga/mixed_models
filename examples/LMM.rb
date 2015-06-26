@@ -31,15 +31,15 @@ epsilon = NMatrix.new([50,1], epsilon_array, dtype: :float64)
 y = (x.dot beta) + (z.dot b) + epsilon
 
 # Set up the covariance parameters
-lambdat = NMatrix.identity(10, dtype: :float64)
 parametrization = Proc.new do |th| 
   diag_blocks = Array.new(5) { NMatrix.new([2,2], [th[0],th[1],0,th[2]], dtype: :float64) }
   NMatrix.block_diagonal(*diag_blocks, dtype: :float64) 
 end
 
 # Fit the model
-model_fit = LMM.new(x: x, y: y, zt: z.transpose, lambdat: lambdat, 
-                    start_point: [1,0,1], lower_bound: Array[0,-Float::INFINITY,0],
+model_fit = LMM.new(x: x, y: y, zt: z.transpose,
+                    start_point: [1,0,1], 
+                    lower_bound: Array[0,-Float::INFINITY,0],
                     &parametrization) 
 
 # Print some results

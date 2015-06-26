@@ -21,19 +21,19 @@ class LMMData
   #
   # === Arguments
   #
-  # * +x+         - fixed effects model matrix
-  # * +y+         - response
-  # * +zt+        - transpose of the random effects model matrix
-  # * +lambdat+   - upper triangular Cholesky factor of the
-  #                 relative covariance matrix of the random effects.
+  # * +x+         - fixed effects model matrix; a dense NMatrix
+  # * +y+         - response; a dense NMatrix
+  # * +zt+        - transpose of the random effects model matrix; a dense NMatrix
+  # * +lambdat+   - upper triangular Cholesky factor of the relative covariance 
+  #                 matrix of the random effects; a dense NMatrix
   # * +weights+   - optional array of prior weights
   # * +offset+    - offset
-  # * +thfun+     - a +Proc+ object that takes a value of +theta+ and produces
-  #                 the non-zero elements of +Lambdat+.  The structure of +Lambdat+
+  # * +thfun+     - a +Proc+ object that takes in an Array +theta+ and produces
+  #                 the non-zero elements of +lambdat+. The structure of +lambdat+
   #                 cannot change, only the numerical values.
   #
   def initialize(x:, y:, zt:, lambdat:, weights: nil, offset: 0.0, &thfun)
-    unless x.is_a?(NMatrix) and y.is_a?(NMatrix) and zt.is_a?(NMatrix) and lambdat.is_a?(NMatrix)
+    unless x.is_a?(NMatrix) && y.is_a?(NMatrix) && zt.is_a?(NMatrix) && lambdat.is_a?(NMatrix)
       raise ArgumentError, "x, y, zt, lambdat should be passed as NMatrix objects"
     end
     raise ArgumentError, "y.shape should be of the form [n,1]" unless y.shape[1]==1
@@ -68,7 +68,6 @@ class LMMData
     tmp_mat2 = (tmp_mat1.dot tmp_mat1.transpose) + NMatrix.identity(@q)
     @l = tmp_mat2.factorize_cholesky[1]            # lower triangular Cholesky factor 
     tmp_mat1, tmp_mat2 = nil, nil
-    #@lambdat_ini = @lambdat                       # b/c it will be updated
     @mu = NMatrix.new([@n,1], dtype: :float64)     # conditional mean of response
     @u = NMatrix.new([@q,1], dtype: :float64)      # conditional mean of spherical random effects
     @pwrss = Float::INFINITY                       # penalized weighted residual sum of squares
