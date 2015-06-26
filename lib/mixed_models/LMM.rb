@@ -365,7 +365,6 @@ class LMM
     end
 
     # (2.2) Deal with categorical variables in the random effects terms
-    # replace the categorical variable name in (non-interaction) random_effects 
     random_effects.each_index do |i|
       reduced = (random_effects[i].include?(:intercept) ? true : false)
       categorical_names.each do |name|
