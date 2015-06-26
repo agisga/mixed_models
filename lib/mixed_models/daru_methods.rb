@@ -74,20 +74,21 @@ module Daru
     #
     # === Usage
     #
-    # > df = Daru::DataFrame.new([(1..7).to_a, ['a','b','b','a','c','d','c']],
-    #                            order: ['int','char']) 
+    # > df = Daru::DataFrame.new([(1..7).to_a, ['a','b','b','a','c','d','c']], order: ['int','char']) 
     # > df.create_indicator_vectors_for_categorical_vectors!
-    #   # => <Daru::DataFrame:70212314363900 @name = 1a2a49d9-35d3-4adf-a993-5266d7d79442 @size = 7>
-    #              int       char char_lvl_b char_lvl_c char_lvl_d 
-    #     0          1          a        0.0        0.0        0.0 
-    #     1          2          b        1.0        0.0        0.0 
-    #     2          3          b        1.0        0.0        0.0 
-    #     3          4          a        0.0        0.0        0.0 
-    #     4          5          c        0.0        1.0        0.0 
-    #     5          6          d        0.0        0.0        1.0 
-    #     6          7          c        0.0        1.0        0.0 
+    #   # => {:char=>[:char_lvl_a, :char_lvl_b, :char_lvl_c, :char_lvl_d]}
+    # > df
+    #   # => #<Daru::DataFrame:70180517472080 @name = 75ddbda4-d4df-41b2-a41e-2f600764061b @size = 7>
+    #              int       char char_lvl_a char_lvl_b char_lvl_c char_lvl_d 
+    #     0          1          a        1.0        0.0        0.0        0.0 
+    #     1          2          b        0.0        1.0        0.0        0.0 
+    #     2          3          b        0.0        1.0        0.0        0.0 
+    #     3          4          a        1.0        0.0        0.0        0.0 
+    #     4          5          c        0.0        0.0        1.0        0.0 
+    #     5          6          d        0.0        0.0        0.0        1.0 
+    #     6          7          c        0.0        0.0        1.0        0.0 
     #
-    def create_indicator_vectors_for_categorical_vectors!(for_model_without_intercept: false)
+    def create_indicator_vectors_for_categorical_vectors!
       indices = Hash.new
 
       self.each_vector_with_index do |vec, name|
@@ -101,12 +102,8 @@ module Daru
             levels = vec.to_a.uniq
           end
           level_indices = Array.new
-          unless for_model_without_intercept 
-            levels.shift
-            for_model_without_intercept = false
-          end
           levels.each do |l|
-            ind = name.to_s + "_lvl_" + l.to_s
+            ind = "#{name}_lvl_#{l}"
             col = Array.new
             vec.each { |e| e==l ? col.push(1.0) : col.push(0.0) }
             vec_for_level_l = Daru::Vector.new(col)

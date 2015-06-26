@@ -326,10 +326,10 @@ class LMM
 
     n = data.size
 
-    # response vector
-    y = NMatrix.new([n,1], data[response].to_a, dtype: :float64)
-
-    # deal with the intercept
+    ##############################################
+    # (1) Does the model include intercept terms?
+    ##############################################
+    
     if fixed_effects.include? :no_intercept then
       fixed_effects.delete(:intercept)
       fixed_effects.delete(:no_intercept)
@@ -341,28 +341,54 @@ class LMM
       end
     end
 
-    # deal with categorical (non-numeric) variables
-    if fixed_effects.include? :intercept then
-      no_intercept = false 
-    else
-      no_intercept = true
-    end
-    # FIXME: Currently the situation, where fixed effects have an intercept but random effects don't, 
-    # is not resolved correctly, because we check only for the fixed effects if they include an intercept term
-    new_names = data.create_indicator_vectors_for_categorical_vectors!(for_model_without_intercept: no_intercept)
+    #################################################################################
+    # (2) Transform categorical (non-numeric) variables to sets of indicator vectors,
+    # and update the fixed and random effects names accordingly
+    #################################################################################
+
+    new_names = data.create_indicator_vectors_for_categorical_vectors!
     categorical_names = new_names.keys
+
+    # (2.1) Deal with categorical variables in the fixed effects terms
+    reduced = (fixed_effects.include?(:intercept) ? true : false)
     categorical_names.each do |name|
-      # replace the categorical variable name in (non-interaction) fixed_effects
+      # replace the categorical variable named name in (non-interaction) fixed_effects
       ind = fixed_effects.find_index(name)
-      fixed_effects[ind..ind] = new_names[name] unless ind.nil?
-      # replace the categorical variable name in (non-interaction) random_effects 
-      random_effects.each_index do |i|
-        ind = random_effects[i].find_index(name)
-        random_effects[i][ind..ind] = new_names[name] unless ind.nil?
+      unless ind.nil?
+        if reduced then
+          fixed_effects[ind..ind] = new_names[name][1..-1]
+        else
+          fixed_effects[ind..ind] = new_names[name]
+          reduced = true
+        end
       end
     end
 
-    # deal with interaction effects and nested grouping factors
+    # (2.2) Deal with categorical variables in the random effects terms
+    # replace the categorical variable name in (non-interaction) random_effects 
+    random_effects.each_index do |i|
+      reduced = (random_effects[i].include?(:intercept) ? true : false)
+      categorical_names.each do |name|
+        # replace the categorical variable named name in non-interaction terms in
+        # the i'th random effects terms group
+        ind = random_effects[i].find_index(name)
+        unless ind.nil?
+          if reduced then
+            random_effects[i][ind..ind] = new_names[name][1..-1]
+          else
+            random_effects[i][ind..ind] = new_names[name]
+            reduced = true
+          end
+        end
+      end
+    end
+
+    ################################################################
+    # (3) Deal with interaction effects and nested grouping factors
+    ################################################################
+
+    # FIXME: this is little tested and much incomplete
+
     interaction_names = Array.new
     fixed_effects.each_with_index do |ef, ind|
       if ef.is_a? Array then
@@ -415,8 +441,17 @@ class LMM
       end
     end
     
-    # add an intercept column, so the intercept will be used whenever specified
+    ################################################################
+    # (4) Construct model matrices and vectors, covariance function,
+    # and optimization parameters 
+    ################################################################
+    
+    # add an intercept column to the data frame, 
+    # so the intercept will be used whenever specified
     data[:intercept] = Array.new(n) {1.0}
+
+    # construct the response vector
+    y = NMatrix.new([n,1], data[response].to_a, dtype: :float64)
 
     # construct the fixed effects design matrix
     x_frame     = data[*fixed_effects]
@@ -456,14 +491,16 @@ class LMM
     tmp2 = Array.new(q*(q-1)/2) {-Float::INFINITY}
     lower_bound = tmp1 + tmp2
 
-    # fit the model
-    lmmfit = LMM.new(x: x, y: y, zt: z.transpose,
-                     x_col_names: x_col_names, z_col_names: z_col_names,
-                     weights: weights, offset: offset, 
-                     reml: reml, start_point: start_point, 
-                     lower_bound: lower_bound, epsilon: epsilon, 
-                     max_iterations: max_iterations, &thfun)
-    return lmmfit
+    ####################
+    # (5) Fit the model
+    ####################
+
+    return LMM.new(x: x, y: y, zt: z.transpose,
+                   x_col_names: x_col_names, z_col_names: z_col_names,
+                   weights: weights, offset: offset, 
+                   reml: reml, start_point: start_point, 
+                   lower_bound: lower_bound, epsilon: epsilon, 
+                   max_iterations: max_iterations, &thfun)
   end
 
   # An Array containing the fitted response values, i.e. the estimated mean of the response

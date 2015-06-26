@@ -23,12 +23,14 @@ describe Daru::DataFrame do
       df2 = Daru::DataFrame.new([(1..7).to_a, 
                                  ['a','b','b','a','c','d','c'],
                                  [:q, :p, :q, :p, :p, :q, :p],
+                                 [1.0,0.0,0.0,1.0,0.0,0.0,0.0],
                                  [0.0,1.0,1.0,0.0,0.0,0.0,0.0],
                                  [0.0,0.0,0.0,0.0,1.0,0.0,1.0],
                                  [0.0,0.0,0.0,0.0,0.0,1.0,0.0],
+                                 [0.0,1.0,0.0,1.0,1.0,0.0,1.0],
                                  [1.0,0.0,1.0,0.0,0.0,1.0,0.0]],
-                                order: ['num', 'char', 'sym', 'char_lvl_b',
-                                        'char_lvl_c', 'char_lvl_d', 'sym_lvl_q']) 
+                                order: ['num', 'char', 'sym', 'char_lvl_a', 'char_lvl_b',
+                                        'char_lvl_c', 'char_lvl_d', 'sym_lvl_p', 'sym_lvl_q']) 
       expect(@df.to_a).to eq(df2.to_a)
     end
 
@@ -39,8 +41,8 @@ describe Daru::DataFrame do
 
     it "returns the names of the newly created 0-1 indicator vectors" do
       names = @df.create_indicator_vectors_for_categorical_vectors!
-      expect(names.values.flatten).to eq([:char_lvl_b, :char_lvl_c, 
-                                          :char_lvl_d, :sym_lvl_q])
+      expect(names.values.flatten).to eq([:char_lvl_a, :char_lvl_b, :char_lvl_c, 
+                                          :char_lvl_d, :sym_lvl_p, :sym_lvl_q])
     end
   end
 end
