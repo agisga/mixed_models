@@ -175,6 +175,17 @@ describe LMM do
           expect(e).to be_within(1e-4).of(ran_ef_from_R[i])
         end
       end
+
+      it "names the fixed effects correctly" do
+        fix_ef_names = [:intercept, :Age, :Species_lvl_Human, :Species_lvl_Ood, :Species_lvl_WeepingAngel]
+        expect(model_fit.fix_ef.keys).to eq(fix_ef_names)
+      end
+
+      it "names the random effects correctly" do
+        ran_ef_names = [:intercept_Asylum, :Age_Asylum, :intercept_Earth, 
+                        :Age_Earth, :intercept_OodSphere, :Age_OodSphere]
+        expect(model_fit.ran_ef.keys).to eq(ran_ef_names)
+      end
     end
 
     context "with categorical fixed and random effects" do
@@ -221,6 +232,17 @@ describe LMM do
         model_fit.ran_ef.values.each_with_index do |e, i|
           expect(e).to be_within(1e-4).of(ran_ef_from_R[i])
         end
+      end
+
+      it "names the fixed effects correctly" do
+        fix_ef_names = [:intercept, :x_lvl_B, :x_lvl_C]
+        expect(model_fit.fix_ef.keys).to eq(fix_ef_names)
+      end
+
+      it "names the random effects correctly" do
+        ran_ef_names = [:intercept_g1, :x_lvl_B_g1, :x_lvl_C_g1, 
+                        :intercept_g2, :x_lvl_B_g2, :x_lvl_C_g2]
+        expect(model_fit.ran_ef.keys).to eq(ran_ef_names)
       end
     end
 
@@ -269,6 +291,17 @@ describe LMM do
           expect(e).to be_within(1e-4).of(ran_ef_from_R[i])
         end
       end
+
+      it "names the fixed effects correctly" do
+        fix_ef_names = [:intercept, :x_lvl_B, :x_lvl_C]
+        expect(model_fit.fix_ef.keys).to eq(fix_ef_names)
+      end
+
+      it "names the random effects correctly" do
+        ran_ef_names = [:x_lvl_A_g1, :x_lvl_B_g1, :x_lvl_C_g1, 
+                        :x_lvl_A_g2, :x_lvl_B_g2, :x_lvl_C_g2]
+        expect(model_fit.ran_ef.keys).to eq(ran_ef_names)
+      end
     end
 
     context "on categorical data with random intercept but no fixed intercept" do
@@ -314,6 +347,17 @@ describe LMM do
         model_fit.ran_ef.values.each_with_index do |e, i|
           expect(e).to be_within(1e-4).of(ran_ef_from_R[i])
         end
+      end
+
+      it "names the fixed effects correctly" do
+        fix_ef_names = [:x_lvl_A, :x_lvl_B, :x_lvl_C]
+        expect(model_fit.fix_ef.keys).to eq(fix_ef_names)
+      end
+
+      it "names the random effects correctly" do
+        ran_ef_names = [:intercept_g1, :x_lvl_B_g1, :x_lvl_C_g1, 
+                        :intercept_g2, :x_lvl_B_g2, :x_lvl_C_g2]
+        expect(model_fit.ran_ef.keys).to eq(ran_ef_names)
       end
     end
   end
