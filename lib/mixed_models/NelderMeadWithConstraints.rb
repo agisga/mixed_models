@@ -346,10 +346,7 @@ module MixedModels
     def iterate
       # set previous simplex as the current simplex
       @previous = Array.new(@simplex.length)
-      0.upto(@simplex.length - 1) do |i|
-        point = @simplex[i].point 
-        @previous[i] = PointValuePair.new(point, f(point))
-      end
+      @simplex.each_with_index { |v,i| @previous[i] = PointValuePair.new(v.point, v.value) }
       # iterate simplex
       iterate_simplex
       # set results
