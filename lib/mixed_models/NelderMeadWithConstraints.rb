@@ -175,15 +175,12 @@ module MixedModels
       end
     end
     
-    # Evaluate all the non-evaluated points of the simplex
+    # Evaluate all the non-evaluated points of the simplex, and sort the points
+    # in the simplex from best to worst
     def evaluate_simplex
       # evaluate the objective function at all non-evaluated simplex points
-      0.upto(@simplex.length - 1) do |i|
-        vertex = @simplex[i]
-        point  = vertex.point
-        if vertex.value.nan?
-          @simplex[i] = PointValuePair.new(point, f(point))
-        end
+      @simplex.each_with_index do |v,i|
+        @simplex[i].value = f(v.point) if v.value.nan?
       end
       # sort the simplex from best to worst
       @simplex.sort!{ |x1, x2| x1.value <=> x2.value }
