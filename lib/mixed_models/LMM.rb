@@ -13,8 +13,8 @@ require 'daru'
 #
 class LMM
 
-  attr_reader :reml, :theta_optimal, :dev_optimal, :dev_fun, :optimization_result, :model_data,
-              :sigma2, :sigma, :sigma_mat, :fix_ef_cov_mat, :ran_ef_cov_mat, :sse, :fix_ef, :ran_ef,
+  attr_reader :reml, :dev_fun, :optimization_result, :model_data,
+              :sigma2, :sigma_mat, :fix_ef, :ran_ef,
               :fix_ef_names, :ran_ef_names
 
   # Fit and store a linear mixed effects model according to the input from the user.
@@ -83,15 +83,6 @@ class LMM
     #################################################
     # Compute and store some output parameters
     #################################################
-    
-    # optimal solution for theta
-    @theta_optimal = @optimization_result.x_minimum 
-    # function value at the optimal solution
-    @dev_optimal   = @optimization_result.f_minimum 
-
-    # sum of squared residuals
-    @sse = 0.0
-    self.residuals.each { |r| @sse += r**2 }
 
     # scale parameter of the covariance; the residuals conditional on the random 
     # effects have variances "sigma2*weights^(-1)"; if all weights are ones then 
@@ -101,23 +92,10 @@ class LMM
              else
                @model_data.pwrss / @model_data.n
              end
-    # square root of sigma2; the residual standard deviation if all weights are one
-    @sigma = Math::sqrt(@sigma2)
 
     # estimate of the covariance matrix Sigma of the random effects vector b,
     # where b ~ N(0, Sigma).
     @sigma_mat = (@model_data.lambdat.transpose.dot @model_data.lambdat) * @sigma2
-
-    # variance-covariance matrix of the random effects estimates, conditional on the
-    # input data, as given in equation (58) in Bates et. al. (2014).
-    rhs = NMatrix.identity(@model_data.q, dtype: :float64) * sigma2
-    u = @model_data.l.triangular_solve(:lower, rhs)
-    v = @model_data.l.transpose.triangular_solve(:upper, u)
-    @ran_ef_cov_mat = (@model_data.lambdat.transpose.dot v).dot @model_data.lambdat
-
-    # variance-covariance matrix of the fixed effects estimates, conditional on the
-    # input data, as given in equation (54) in Bates et. al. (2014).
-    @fix_ef_cov_mat = @model_data.rxtrx.inverse * @sigma2
 
     # Construct a Hash containing information about the estimated fixed effects 
     # coefficiants (these estimates are conditional on the estimated covariance parameters).
@@ -514,5 +492,61 @@ class LMM
   #
   def residuals
     (@model_data.y - @model_data.mu).to_flat_a
+  end
+
+  # Sum of squared residuals
+  #
+  def sse
+    s = 0.0
+    self.residuals.each { |r| s += r**2 }
+    return s
+  end
+
+  # Variance-covariance matrix of the estimates of the fixed effects terms, conditional on the
+  # input data, as given in equation (54) in Bates et. al. (2014).
+  #
+  # === References
+  # 
+  # * Douglas Bates, Martin Maechler, Ben Bolker, Steve Walker, 
+  #   "Fitting Linear Mixed - Effects Models using lme4". arXiv:1406.5823v1 [stat.CO]. 2014.
+  #
+  def fix_ef_cov_mat
+    return @model_data.rxtrx.inverse * @sigma2
+  end
+
+  # Variance-covariance matrix of the random effects estimates, conditional on the
+  # input data, as given in equation (58) in Bates et. al. (2014).
+  #
+  # === References
+  # 
+  # * Douglas Bates, Martin Maechler, Ben Bolker, Steve Walker, 
+  #   "Fitting Linear Mixed - Effects Models using lme4". arXiv:1406.5823v1 [stat.CO]. 2014.
+  #
+  def ran_ef_cov_mat 
+    rhs = NMatrix.identity(@model_data.q, dtype: :float64) * sigma2
+    u = @model_data.l.triangular_solve(:lower, rhs)
+    v = @model_data.l.transpose.triangular_solve(:upper, u)
+    return (@model_data.lambdat.transpose.dot v).dot(@model_data.lambdat)
+  end
+    
+  # Optimal solution for of the minimization of the deviance function or
+  # the REML criterion (whichever was used to fit the model)
+  #
+  def theta
+    return @optimization_result.x_minimum 
+  end
+
+  # Value of the deviance function or the REML criterion (whichever was used to fit the model)
+  # at the optimal solution
+  #
+  def deviance
+    return @optimization_result.f_minimum 
+  end
+
+  # The square root of +@sigma2+. It is the residual standard deviation if all weights are 
+  #  equal to one
+  #
+  def sigma
+    Math::sqrt(@sigma2)
   end
 end

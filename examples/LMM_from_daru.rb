@@ -44,8 +44,8 @@ puts "Model with numerical variables only; random intercept and slope"
 puts "-------------------------------------------"
 
 puts "(1) Model fit"
-puts "Optimal theta: \t#{model_fit.theta_optimal}"
-puts "REML criterion: \t#{model_fit.dev_optimal}"
+puts "Optimal theta: \t#{model_fit.theta}"
+puts "REML criterion: \t#{model_fit.deviance}"
 
 puts "(2) Fixed effects"
 puts "Intercept: \t#{model_fit.fix_ef["x0"]}"
@@ -60,7 +60,7 @@ puts "Correlation of random intercept and slope: \t#{model_fit.sigma_mat[0,1] / 
 
 puts "(4) Residuals"
 puts "Variance: \t#{model_fit.sigma2}"
-puts "Standard deviation: \t#{Math::sqrt(model_fit.sigma2)}"
+puts "Standard deviation: \t#{model_fit.sigma}"
 
 puts "-------------------------------------------"
 
@@ -87,11 +87,11 @@ model_fit = LMM.from_daru(response: :y, fixed_effects: [:intercept, :x, :a],
 puts "\n-------------------------------------------"
 puts "Model with numerical and categorical variables as fixed and random effects"
 puts "-------------------------------------------"
-puts "REML criterion: \t#{model_fit.dev_optimal}"
+puts "REML criterion: \t#{model_fit.deviance}"
 puts "Fixed effects:"
 puts model_fit.fix_ef
 puts "Random effects:"
 puts model_fit.ran_ef
 puts "Variance: \t#{model_fit.sigma2}"
-puts "Standard deviation: \t#{Math::sqrt(model_fit.sigma2)}"
+puts "Standard deviation: \t#{model_fit.sigma}"
 puts "-------------------------------------------"

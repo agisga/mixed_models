@@ -44,8 +44,8 @@ model_fit = LMM.new(x: x, y: y, zt: z.transpose,
 
 # Print some results
 puts "(1) Model fit"
-puts "Optimal theta: \t#{model_fit.theta_optimal}"
-puts "REML criterion: \t#{model_fit.dev_optimal}"
+puts "Optimal theta: \t#{model_fit.theta}"
+puts "REML criterion: \t#{model_fit.deviance}"
 
 puts "(2) Fixed effects"
 puts "Intercept: \t#{model_fit.fix_ef["x0"]}"
@@ -60,4 +60,4 @@ puts "Correlation of random intercept and slope: \t#{model_fit.sigma_mat[0,1] / 
 
 puts "(4) Residuals"
 puts "Variance: \t#{model_fit.sigma2}"
-puts "Standard deviantion: \t#{Math::sqrt(model_fit.sigma2)}"
+puts "Standard deviantion: \t#{model_fit.sigma}"
