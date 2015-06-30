@@ -1,5 +1,7 @@
 require 'mixed_models'
 
+#TODO: add better spec for LMM#sigma_mat; add spec for LMM#fitted, LMM#residuals, LMM#sse, LMM#fix_ef_cov_mat, LMM#ran_ef_cov_mat
+
 describe LMM do
   context "fit from raw matrices with fixed and random intercept and slope" do
     subject(:model_fit) do

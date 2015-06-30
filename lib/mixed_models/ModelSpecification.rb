@@ -171,4 +171,110 @@ module MixedModels
       lambdat = NMatrix.block_diagonal(*lambdat_array, dtype: :float64)
     end
   end
+
+  def MixedModels.lmm_adjust_data_frame(fixed_effects:, random_effects:, grouping:, data:)
+    #################################################################################
+    # Transform categorical (non-numeric) variables to sets of indicator vectors,
+    # and update the fixed and random effects names accordingly
+    #################################################################################
+
+    new_names = data.create_indicator_vectors_for_categorical_vectors!
+    categorical_names = new_names.keys
+
+    # (1) Deal with categorical variables in the fixed effects terms
+    reduced = (fixed_effects.include?(:intercept) ? true : false)
+    categorical_names.each do |name|
+      # replace the categorical variable named name in (non-interaction) fixed_effects
+      ind = fixed_effects.find_index(name)
+      unless ind.nil?
+        if reduced then
+          fixed_effects[ind..ind] = new_names[name][1..-1]
+        else
+          fixed_effects[ind..ind] = new_names[name]
+          reduced = true
+        end
+      end
+    end
+
+    # (2) Deal with categorical variables in the random effects terms
+    random_effects.each_index do |i|
+      reduced = (random_effects[i].include?(:intercept) ? true : false)
+      categorical_names.each do |name|
+        # replace the categorical variable named name in non-interaction terms in
+        # the i'th random effects terms group
+        ind = random_effects[i].find_index(name)
+        unless ind.nil?
+          if reduced then
+            random_effects[i][ind..ind] = new_names[name][1..-1]
+          else
+            random_effects[i][ind..ind] = new_names[name]
+            reduced = true
+          end
+        end
+      end
+    end
+
+    ################################################################
+    # Deal with interaction effects and nested grouping factors
+    ################################################################
+
+    # FIXME: this is little tested and much incomplete
+
+    interaction_names = Array.new
+    fixed_effects.each_with_index do |ef, ind|
+      if ef.is_a? Array then
+        raise(NotImplementedError, "interaction effects can only be bi-variate") unless ef.length == 2
+        if categorical_names.include? ef[0] then
+          #TODO: implement this!
+          raise(NotImplementedError, "interaction effects cannot be categorical") 
+        else
+          if categorical_names.include? ef[1] then
+            #TODO: implement this!
+            raise(NotImplementedError, "interaction effects cannot be categorical") 
+          else
+            inter_name = (ef[0].to_s + "_and_" + ef[1].to_s).to_sym
+            unless interaction_names.include? inter_name
+              data[inter_name] = data[ef[0]] * data[ef[1]] 
+              interaction_names.push(inter_name)
+            end
+            fixed_effects[ind] = inter_name
+          end
+        end
+      end
+    end
+    random_effects.each do |ran_ef|
+      ran_ef.each_with_index do |ef, ind|
+        if ef.is_a? Array then
+          raise(NotImplementedError, "interaction effects can only be bi-variate") unless ef.length == 2
+          if categorical_names.include? ef[0] then
+            #TODO: implement this!
+            raise(NotImplementedError, "interaction effects cannot be categorical") 
+          else
+            if categorical_names.include? ef[1] then
+              #TODO: implement this!
+              raise(NotImplementedError, "interaction effects cannot be categorical") 
+            else
+              inter_name = (ef[0].to_s + "_and_" + ef[1].to_s).to_sym
+              unless interaction_names.include? inter_name
+                data[inter_name] = data[ef[0]] * data[ef[1]]
+                interaction_names.push(inter_name)
+              end
+              ran_ef[ind] = inter_name
+            end
+          end
+        end
+      end
+    end
+    grouping.each_with_index do |grp, ind|
+      if grp.is_a? Array then
+        #TODO: implement this!
+        raise(NotImplementedError, "nested effects not implemented yet")
+      end
+    end
+
+    return {fixed_effects: fixed_effects,
+            random_effects: random_effects,
+            grouping: grouping,
+            data: data}
+  end
 end
