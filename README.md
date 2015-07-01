@@ -1,5 +1,7 @@
 # mixed_models
 
+[![Build Status](https://travis-ci.org/agisga/mixed_models.svg?branch=master)](https://travis-ci.org/agisga/mixed_models)
+
 Fit statistical linear models with fixed and mixed (random) effects in Ruby.
 
 **Early stage work in progress.**
