@@ -1,3 +1,7 @@
+# Copyright (c) 2015 Alexej Gossmann 
+#
+# Methods for internal use.
+
 module MixedModels 
 
   # Generate the random effects model matrix Z in the linear mixed effects model 
@@ -172,6 +176,21 @@ module MixedModels
     end
   end
 
+  # For internal use in LMM#from_daru and LMM#predict (and maybe other LMM methods).
+  # Adjusts +data+, +fixed_effects+, +random_effects+ and +grouping+ for categorical 
+  # variables, interaction effects and nested grouping factors. The categorical vectors
+  # in the data frame are replaced with sets of 0-1-valued indicator vectors. New vectors
+  # are added to the data frame for pair-wise interaction effects and for pair-wise nestings.
+  #
+  # === Arguments
+  # 
+  # * +fixed_effects+  - Array of names of the fixed effects, see LMM#from_daru for details
+  # * +random_effects+ - Array of Arrays of names of random effects, see LMM#from_daru for details
+  # * +grouping+       - Array of names which determine the grouping structure underlying the
+  #                      random effects, see LMM#from_daru for details 
+  # * +data+           - Daru::DataFrame object, containing the response, fixed and random 
+  #                      effects, as well as the grouping variables
+  #
   def MixedModels.lmm_adjust_data_frame(fixed_effects:, random_effects:, grouping:, data:)
     #################################################################################
     # Transform categorical (non-numeric) variables to sets of indicator vectors,

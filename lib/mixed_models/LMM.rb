@@ -481,6 +481,41 @@ class LMM
     Math::sqrt(@sigma2)
   end
 
+  # Predictions from the fitted model on new data, conditional on the estimated fixed and random 
+  # effects coefficients. Predictions can be made with ot without the inclusion of random
+  # effects terms. The data can be either supplied as a # Daru::DataFrame object +newdata+, 
+  # or as raw fixed and random effects model matrices +x+ and +z+. If both, +newdata+ and 
+  # +x+ are passed, then an error message is thrown. If neither is passed, then the 
+  # predictions are computed with the data that was used to fit the model.
+  #
+  # === Arguments
+  #
+  # * +newdata+     - a Daru::DataFrame object containing the data for which the predictions
+  #                   will be evaluated
+  # * +x+           - fixed effects model matrix, a NMatrix object
+  # * +z+           - random effects model matrix, a NMatrix object
+  # * +with_ran_ef+ - indicator whether the random effects should be considered in the
+  #                   predictions; i.e. whether the predictions are computed as x*beta
+  #                   or as x*beta+z*b; default is true
+  #
+  # === Usage
+  #
+  #  df = Daru::DataFrame.from_csv './data/alien_species.csv'
+  #  model_fit = LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", data: df)
+  #  # Predictions of aggression levels on a new data set:
+  #  dfnew = Daru::DataFrame.from_csv './data/alien_species_newdata.csv'
+  #  model_fit.predict(newdata: dfnew)
+  #   # => [1070.9125752531213,
+  #     182.45206492790766,
+  #     -17.064468754763425,
+  #     384.78815861991046,
+  #     876.1240725686444,
+  #     674.711339114886,
+  #     1092.6985606350875,
+  #     871.150885526236,
+  #     687.4629975728096,
+  #     -4.0162601001437395] 
+  #
   def predict(newdata: nil, x: nil, z: nil, with_ran_ef: true)
     raise(ArgumentError, "EITHER pass newdata OR x and z OR nothing") if newdata && (x || z)
     raise(ArgumentError, "If you pass z you need to pass x as well") if z && x.nil?
