@@ -13,9 +13,8 @@ require 'daru'
 #
 class LMM
 
-  attr_reader :reml, :dev_fun, :optimization_result, :model_data,
-              :sigma2, :sigma_mat, :fix_ef, :ran_ef,
-              :fix_ef_names, :ran_ef_names
+  attr_reader :reml, :formula, :dev_fun, :optimization_result, :model_data,
+              :sigma2, :sigma_mat, :fix_ef, :ran_ef, :fix_ef_names, :ran_ef_names
 
   # Fit and store a linear mixed effects model according to the input from the user.
   # Parameter estimates are obtained by the method described in Bates et. al. (2014).
@@ -45,6 +44,12 @@ class LMM
   #                      of the optimization algorithm; see the respective documentation for 
   #                      more detail
   # * +max_iterations+ - the maximum number of iterations for the optimization algorithm
+  # * +from_daru_args+ - (! Never used in a direct call of #initialize) a Hash, storinig some 
+  #                      arguments supplied to #from_daru (except the data set and the arguments 
+  #                      that #from_daru shares with #initialize), if #initilize was originally 
+  #                      called from within the #from_daru method
+  # * +formula+        - (! Never used in a direct call of #initialize) a String containing the 
+  #                      formula used to fit the model, if the model was fit by #from_formula
   # * +thfun+          - a block or +Proc+ object that takes in an Array +theta+ and produces
   #                      the non-zero elements of the dense NMatrix +lambdat+, which is the upper 
   #                      triangular Cholesky factor of the relative covariance matrix of the random 
@@ -57,8 +62,10 @@ class LMM
   #
   def initialize(x:, y:, zt:, x_col_names: nil, z_col_names: nil, weights: nil, 
                  offset: 0.0, reml: true, start_point:, lower_bound: nil, upper_bound: nil, 
-                 epsilon: 1e-6, max_iterations: 1e6, &thfun) 
-    @reml = reml
+                 epsilon: 1e-6, max_iterations: 1e6, from_daru_args: nil, formula: nil, &thfun) 
+    @from_daru_args = from_daru_args
+    @formula        = formula
+    @reml           = reml
 
     ################################################
     # Fit the linear mixed model
@@ -184,6 +191,8 @@ class LMM
           "If you want to exclude an intercept term use '0'.") if formula.include? "intercept"
     raise(ArgumentError, "formula must contain a '~' symbol") unless formula.include? "~"
 
+    original_formula = formula.clone
+
     # remove whitespaces
     formula.gsub!(%r{\s+}, "")
     # replace ":" with "*", because the LMMFormula class requires this convention
@@ -231,7 +240,7 @@ class LMM
                          data: data, 
                          weights: weights, offset: offset, reml: reml, 
                          start_point: start_point, epsilon: epsilon, 
-                         max_iterations: max_iterations)
+                         max_iterations: max_iterations, formula: original_formula)
   end
 
   # Fit and store a linear mixed effects model from data supplied as Daru::DataFrame.
@@ -284,6 +293,8 @@ class LMM
   #                      documentation for more detail
   # * +max_iterations+ - optional, the maximum number of iterations for the optimization 
   #                      algorithm
+  # * +formula+        - (! Never used in a direct call of #from_daru) a String containing the 
+  #                      formula used to fit the model, if the model was fit by #from_formula
   #
   # === Usage
   #
@@ -299,8 +310,11 @@ class LMM
   #
   def LMM.from_daru(response:, fixed_effects:, random_effects:, grouping:, data:,
                     weights: nil, offset: 0.0, reml: true, start_point: nil,
-                    epsilon: 1e-6, max_iterations: 1e6)
+                    epsilon: 1e-6, max_iterations: 1e6, formula: nil)
     raise(ArgumentError, "data should be a Daru::DataFrame") unless data.is_a?(Daru::DataFrame)
+
+    given_args = Marshal.load(Marshal.dump({response: response, fixed_effects: fixed_effects,
+                                            random_effects: random_effects, grouping: grouping}))
 
     n = data.size
 
@@ -318,6 +332,10 @@ class LMM
         r.delete(:no_intercept)
       end
     end
+
+    # add an intercept column to the data frame, 
+    # so the intercept will be used whenever specified
+    data[:intercept] = Array.new(n) {1.0}
 
     ################################################################
     # (2) Adjust +data+, +fixed_effects+, +random_effects+ and 
@@ -337,10 +355,6 @@ class LMM
     # (3) Construct model matrices and vectors, covariance function,
     # and optimization parameters 
     ################################################################
-    
-    # add an intercept column to the data frame, 
-    # so the intercept will be used whenever specified
-    data[:intercept] = Array.new(n) {1.0}
 
     # construct the response vector
     y = NMatrix.new([n,1], data[response].to_a, dtype: :float64)
@@ -392,7 +406,9 @@ class LMM
                    weights: weights, offset: offset, 
                    reml: reml, start_point: start_point, 
                    lower_bound: lower_bound, epsilon: epsilon, 
-                   max_iterations: max_iterations, &thfun)
+                   max_iterations: max_iterations, 
+                   formula: formula, from_daru_args: given_args, 
+                   &thfun)
   end
 
   # An Array containing the fitted response values, i.e. the estimated mean of the response
@@ -463,5 +479,77 @@ class LMM
   #
   def sigma
     Math::sqrt(@sigma2)
+  end
+
+  def predict(newdata: nil, x: nil, z: nil, with_ran_ef: true)
+    raise(ArgumentError, "EITHER pass newdata OR x and z OR nothing") if newdata && (x || z)
+    raise(ArgumentError, "If you pass z you need to pass x as well") if z && x.nil?
+
+    # predict from raw model matrices
+    if x then
+      y = x.dot(@model_data.beta)
+      if with_ran_ef then
+        raise(ArgumentError, "EITHER pass z OR set with_ran_ef to be false") if z.nil?
+        y += z.dot(@model_data.b)
+      end
+    # predict from Daru::DataFrame
+    elsif newdata then
+      raise(ArgumentError, "LMM#predict does not work with a Daru::DataFrame," +
+            "if the model was not fit using a Daru::DataFrame") if @from_daru_args.nil?
+      # to prevent side effects on these parameters:
+      fe = Marshal.load(Marshal.dump(@from_daru_args[:fixed_effects]))
+      re = Marshal.load(Marshal.dump(@from_daru_args[:random_effects]))
+      gr = Marshal.load(Marshal.dump(@from_daru_args[:grouping]))
+    
+      # adjust the data just like in #from_daru
+      if fe.include? :no_intercept then
+        fe.delete(:intercept)
+        fe.delete(:no_intercept)
+      end
+      re.each do |r|
+        if r.include? :no_intercept then
+          r.delete(:intercept)
+          r.delete(:no_intercept)
+        end
+      end
+
+      n = newdata.size
+      newdata[:intercept] = Array.new(n) {1.0}
+      adjusted = MixedModels::lmm_adjust_data_frame(fixed_effects: fe, random_effects: re,
+                                                    grouping: gr, data: newdata)
+      newdata = adjusted[:data]
+      fe, re, gr = adjusted[:fixed_effects], adjusted[:random_effects], adjusted[:grouping]
+      
+      # construct the fixed effects design matrix
+      x_frame     = newdata[*@fix_ef_names]
+      x           = x_frame.to_nm
+
+      # construct the random effects model matrix and covariance function 
+      num_groups     = gr.length
+      ran_ef_raw_mat = Array.new
+      ran_ef_grp     = Array.new
+      num_ran_ef     = Array.new
+      num_grp_levels = Array.new
+      0.upto(num_groups-1) do |i|
+        xi_frame = newdata[*re[i]]
+        ran_ef_raw_mat[i] = xi_frame.to_nm
+        ran_ef_grp[i] = newdata[gr[i]].to_a
+        num_ran_ef[i] = ran_ef_raw_mat[i].shape[1]
+        num_grp_levels[i] = ran_ef_grp[i].uniq.length
+      end
+      z = MixedModels::mk_ran_ef_model_matrix(ran_ef_raw_mat, ran_ef_grp, re)[:z]
+
+      # compute the predictions
+      y = x.dot(@model_data.beta)
+      y += z.dot(@model_data.b) if with_ran_ef
+    # predict on the data that was used to fit the model
+    else
+      y = with_ran_ef ? @model_data.mu : @model_data.x.dot(@model_data.beta)
+    end
+
+    # add the offset
+    y += @model_data.offset 
+
+    return y.to_flat_a
   end
 end
