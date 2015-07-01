@@ -31,7 +31,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake", "~> 10.0"
   spec.add_development_dependency "rspec", "~> 3.2"
 
-  spec.add_dependency "nmatrix"
+  spec.add_dependency "nmatrix", "~> 0.1.0"
   spec.add_dependency "daru", "~> 0.1.0"
 
   # This gem will work with 2.0 or greater...

@@ -19,17 +19,16 @@ Or install it yourself as:
 
     $ gem install mixed_models -->
 
-Ruby is required in version >=2.0 because keyword arguments are excessively used in `mixed_models`.
-Moreover, prior to the installation of `mixed_models`, currently the `NMatrix` gem needs to be installed in its development version from <https://github.com/SciRuby/nmatrix.git>.
-
-Then `mixed_models` can be installed using the command line:
+The development version of `mixed_models` can be installed using the command line:
 
 ```
 git clone https://github.com/agisga/mixed_models.git
 cd mixed_models/
 bundle install
-rake install
+bundle exec rake install
 ```
+
+Ruby is required in version >=2.0 because keyword arguments are excessively used in `mixed_models`.
 
 Feel free to contact me at alexej [dot] go [at] googlemail [dot] com, in case of difficulties with the installation.
 
