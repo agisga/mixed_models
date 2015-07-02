@@ -181,6 +181,10 @@ module MixedModels
   # variables, interaction effects and nested grouping factors. The categorical vectors
   # in the data frame are replaced with sets of 0-1-valued indicator vectors. New vectors
   # are added to the data frame for pair-wise interaction effects and for pair-wise nestings.
+  # The names of the fixed and random effects as well as grouping factors are adjusted 
+  # accordingly.
+  # Returned is a Hash containing the updated +data+, +fixed_effects+, +random_effects+ 
+  # and +grouping+
   #
   # === Arguments
   # 
