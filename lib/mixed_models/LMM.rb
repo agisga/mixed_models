@@ -14,7 +14,8 @@ require 'daru'
 class LMM
 
   attr_reader :reml, :formula, :dev_fun, :optimization_result, :model_data,
-              :sigma2, :sigma_mat, :fix_ef, :ran_ef, :fix_ef_names, :ran_ef_names
+              :sigma2, :sigma_mat, :fix_ef, :ran_ef, :fix_ef_names, :ran_ef_names,
+              :fix_ef_sd, :ran_ef_sd
 
   # Fit and store a linear mixed effects model according to the input from the user.
   # Parameter estimates are obtained by the method described in Bates et. al. (2014).
@@ -110,8 +111,8 @@ class LMM
                     else
                       x_col_names
                     end
-    # Construct a Hash containing information about the estimated fixed effects 
-    # coefficiants (these estimates are conditional on the estimated covariance parameters).
+    # Hash containing the estimated fixed effects coefficiants (these estimates are 
+    # conditional on the estimated covariance parameters).
     @fix_ef = Hash.new
     @fix_ef_names.each_with_index { |name, i| @fix_ef[name] = @model_data.beta[i] }
     
@@ -121,8 +122,8 @@ class LMM
                     else
                       z_col_names
                     end
-    # Construct a Hash containing information about the estimated mean values of the 
-    # random effects (these are conditional estimates which depend on the input data).
+    # Hash containing the estimated mean values of the random effects terms
+    # (these are conditional estimates which depend on the input data).
     @ran_ef = Hash.new
     @ran_ef_names.each_with_index { |name, i| @ran_ef[name] = @model_data.b[i] }
   end
@@ -434,7 +435,7 @@ class LMM
   end
 
   # Variance-covariance matrix of the estimates of the fixed effects terms, conditional on the
-  # input data, as given in equation (54) in Bates et. al. (2014).
+  # estimated covariance parameters, as given in equation (54) in Bates et. al. (2014).
   #
   # === References
   # 
@@ -445,18 +446,30 @@ class LMM
     return @model_data.rxtrx.inverse * @sigma2
   end
 
-  # Variance-covariance matrix of the random effects estimates, conditional on the
-  # input data, as given in equation (58) in Bates et. al. (2014).
+  # Returns a Hash containing the standard deviations of the estimated fixed effects 
+  # coefficients (these estimates are conditional on the estimated covariance parameters).
+  #
+  def fix_ef_sd 
+    result = Hash.new
+    cov_mat = self.fix_ef_cov_mat
+    @fix_ef_names.each_with_index { |name, i| result[name] = Math::sqrt(cov_mat[i,i]) }
+    return result
+  end
+
+  # Conditional variance-covariance matrix of the random effects estimates, based on
+  # the assumption that the fixed effects vector beta, the covariance factor Lambda(theta)
+  # and the scaling factor sigma are known (i.e. not random; the corresponding estimates are 
+  # used as "true" values), as given in equation (58) in Bates et. al. (2014).
   #
   # === References
   # 
   # * Douglas Bates, Martin Maechler, Ben Bolker, Steve Walker, 
   #   "Fitting Linear Mixed - Effects Models using lme4". arXiv:1406.5823v1 [stat.CO]. 2014.
   #
-  def ran_ef_cov_mat 
-    rhs = NMatrix.identity(@model_data.q, dtype: :float64) * sigma2
-    u = @model_data.l.triangular_solve(:lower, rhs)
-    v = @model_data.l.transpose.triangular_solve(:upper, u)
+  def cond_cov_mat_ran_ef
+    #TODO: this can be more efficient with a method for triangular matrices
+    linv = @model_data.l.invert
+    v = (linv.transpose.dot linv) * @sigma2
     return (@model_data.lambdat.transpose.dot v).dot(@model_data.lambdat)
   end
     

@@ -1,6 +1,6 @@
 require 'mixed_models'
 
-#TODO: add better spec for LMM#sigma_mat; add spec for LMM#fitted, LMM#residuals, LMM#sse, LMM#fix_ef_cov_mat, LMM#ran_ef_cov_mat
+#TODO: add better spec for LMM#sigma_mat; add spec for LMM#fitted, LMM#residuals, LMM#sse
 
 describe LMM do
 
@@ -128,7 +128,30 @@ describe LMM do
     #  > predict(mod, newdata, re.form=NA)
     #          1         2         3         4         5         6         7         8         9        10 
     #  1002.6356  110.8389  105.4177  506.5997  800.0421  799.9768 1013.8700  807.1616  808.4026  114.0394 
-    #
+    #  # standard deviations of the fixed effects estimates
+    #  > sqrt(diag(vcov(mod)))
+    #  [1] 60.15942377  0.08987599  0.26825658  0.28145153  0.27578794
+    #  # covariance matrix of the random effects coefficient estimates
+    #  > vcov(mod)
+    #  5 x 5 Matrix of class "dpoMatrix"
+    #                        (Intercept)           Age  SpeciesHuman    SpeciesOod SpeciesWeepingAngel
+    #  (Intercept)         3619.15626823 -3.231326e-01 -2.558786e-02 -2.882389e-02       -3.208552e-02
+    #  Age                   -0.32313265  8.077694e-03 -4.303052e-05 -3.332581e-05        4.757580e-06
+    #  SpeciesHuman          -0.02558786 -4.303052e-05  7.196159e-02  3.351678e-02        3.061001e-02
+    #  SpeciesOod            -0.02882389 -3.332581e-05  3.351678e-02  7.921496e-02        3.165401e-02
+    #  SpeciesWeepingAngel   -0.03208552  4.757580e-06  3.061001e-02  3.165401e-02        7.605899e-02
+    #  > re <- ranef(mod, condVar=TRUE)
+    #  > m <- attr(re[[1]], which='postVar')
+    #  # conditional covariance matrix of the random effects estimates
+    #  > bdiag(m[,,1],m[,,2],m[,,3])
+    #    6 x 6 sparse Matrix of class "dgCMatrix"
+    #                                                                              
+    #    [1,]  0.1098433621 -5.462386e-04  .             .             .             .           
+    #    [2,] -0.0005462386  3.465442e-06  .             .             .             .           
+    #    [3,]  .             .             0.1872216782 -8.651231e-04  .             .           
+    #    [4,]  .             .            -0.0008651231  4.845105e-06  .             .           
+    #    [5,]  .             .             .             .             0.1481118862 -7.468634e-04
+    #    [6,]  .             .             .             .            -0.0007468634  4.748243e-06
 
     describe "#predict" do
       context "with Daru::DataFrame new data input" do
@@ -146,6 +169,37 @@ describe LMM do
                            799.9768, 1013.8700, 807.1616, 808.4026, 114.0394]
           predictions = model_fit.predict(newdata: newdata, with_ran_ef: false)
           predictions.each_with_index { |p,i| expect(p).to be_within(1e-4).of(result_from_R[i]) }
+        end
+      end
+    end
+
+    describe "#fix_ef_sd" do
+      it "computes the standard deviations of the fixed effects coefficients correctly" do
+        result_from_R = [60.15942377, 0.08987599, 0.26825658, 0.28145153, 0.27578794]
+        result = model_fit.fix_ef_sd.values
+        result.each_index { |i| expect(result[i]/result_from_R[i]).to be_within(1e-2).of(1.0) }
+      end
+    end
+
+    describe "#fix_ef_cov_mat" do
+      it "computes the covariance matrix of the fixed effects coefficients correctly" do
+        result_from_R = [3619.15626823, -3.231326e-01, -2.558786e-02, -2.882389e-02, -3.208552e-02, -0.32313265, 8.077694e-03, -4.303052e-05, -3.332581e-05, 4.757580e-06, -0.02558786, -4.303052e-05, 7.196159e-02, 3.351678e-02, 3.061001e-02, -0.02882389, -3.332581e-05, 3.351678e-02, 7.921496e-02, 3.165401e-02, -0.03208552, 4.757580e-06, 3.061001e-02, 3.165401e-02, 7.605899e-02]
+        result = model_fit.fix_ef_cov_mat.to_flat_a
+        result.each_index { |i| expect(result[i]/result_from_R[i]).to be_within(1e-2).of(1.0) }
+      end
+    end
+
+    describe "#cond_cov_mat_ran_ef" do
+      it "computes the conditional covariance matrix of " +
+         "the random effects coefficient estimates correstly" do
+        result_from_R = [0.1098433621, -5.462386e-04, 0.0, 0.0, 0.0, 0.0, -0.0005462386, 3.465442e-06, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1872216782, -8.651231e-04, 0.0, 0.0, 0.0, 0.0, -0.0008651231, 4.845105e-06, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1481118862, -7.468634e-04, 0.0, 0.0, 0.0, 0.0, -0.0007468634, 4.748243e-06]
+        result = model_fit.cond_cov_mat_ran_ef.to_flat_a
+        result.each_index do |i| 
+          if result_from_R[i] == 0 then
+            expect(result[i]).to eq(0)
+          else
+            expect(result[i]/result_from_R[i]).to be_within(1e-2).of(1.0)
+          end
         end
       end
     end
