@@ -14,8 +14,7 @@ require 'daru'
 class LMM
 
   attr_reader :reml, :formula, :dev_fun, :optimization_result, :model_data,
-              :sigma2, :sigma_mat, :fix_ef, :ran_ef, :fix_ef_names, :ran_ef_names,
-              :fix_ef_sd, :ran_ef_sd
+              :sigma2, :sigma_mat, :fix_ef, :ran_ef, :fix_ef_names, :ran_ef_names
 
   # Fit and store a linear mixed effects model according to the input from the user.
   # Parameter estimates are obtained by the method described in Bates et. al. (2014).
@@ -122,7 +121,7 @@ class LMM
                     else
                       z_col_names
                     end
-    # Hash containing the estimated mean values of the random effects terms
+    # Hash containing the estimated conditional mean values of the random effects terms
     # (these are conditional estimates which depend on the input data).
     @ran_ef = Hash.new
     @ran_ef_names.each_with_index { |name, i| @ran_ef[name] = @model_data.b[i] }
