@@ -2,6 +2,7 @@
  
 require 'nmatrix'
 require 'daru'
+require 'distribution'
 
 # Linear mixed effects models.
 # The implementation is based on Bates et al. (2014)
@@ -453,6 +454,67 @@ class LMM
     cov_mat = self.fix_ef_cov_mat
     @fix_ef_names.each_with_index { |name, i| result[name] = Math::sqrt(cov_mat[i,i]) }
     return result
+  end
+
+  # Returns a Hash containing the Wald z test statistics for each fixed effects coefficient.
+  #
+  def fix_ef_z
+    sd = self.fix_ef_sd
+    z  = Hash.new
+    sd.each_key { |k| z[k] = @fix_ef[k] / sd[k] }
+    return z
+  end
+
+  # Returns a Hash containing the p-values of the fixed effects coefficient.
+  #
+  # === Arguments
+  #
+  # * +method+ - determines the method used to compute the p-values;
+  #              dafault and currently the only possibility is +:wald+,
+  #              which denotes the Wald z test
+  #
+  def fix_ef_p(method: :wald)
+    p = Hash.new
+
+    case method
+    when :wald
+      z = self.fix_ef_z
+      z.each_key { |k| p[k] = 2.0*(1.0 - Distribution::Normal.cdf(z[k].abs)) }
+    else
+      raise(NotImplementedError, "Method #{method} is currently not implemented")
+    end
+
+    return p
+  end
+
+  # Returns a Hash containing the confidence intervals of the fixed effects
+  # coefficients.
+  #
+  # === Arguments
+  #
+  # * +level+  - confidence level, a number between 0 and 1
+  # * +method+ - determines the method used to compute the confidence intervals;
+  #              dafault and currently the only possibility is +:wald+, which 
+  #              approximates the confidence intervals based on the Wald z test statistic 
+  #
+  def fix_ef_conf_int(level: 0.95, method: :wald)
+    alpha = 1.0 - level
+    conf_int = Hash.new
+
+    case method
+    when :wald
+      z = Distribution::Normal.p_value(alpha/2.0).abs
+      sd = self.fix_ef_sd
+      @fix_ef.each_key do |k|
+        conf_int[k] = Array.new
+        conf_int[k][0] = @fix_ef[k] - z * sd[k]
+        conf_int[k][1] = @fix_ef[k] + z * sd[k]
+      end
+    else
+      raise(NotImplementedError, "Method #{method} is currently not implemented")
+    end
+
+    return conf_int
   end
 
   # Conditional variance-covariance matrix of the random effects estimates, based on

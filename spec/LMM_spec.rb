@@ -152,6 +152,22 @@ describe LMM do
     #    [4,]  .             .            -0.0008651231  4.845105e-06  .             .           
     #    [5,]  .             .             .             .             0.1481118862 -7.468634e-04
     #    [6,]  .             .             .             .            -0.0007468634  4.748243e-06
+    #  > vc = vcov(mod)
+    #  > z = fixef(mod) / sqrt(diag(vc))
+    #  > z
+    #          (Intercept)                 Age        SpeciesHuman          SpeciesOod SpeciesWeepingAngel 
+    #           16.8932256          -0.7267364       -1862.7453318       -3196.1784666        -723.7044506 
+    #  > pval = 2*(1-pnorm(abs(z)))
+    #  > pval
+    #          (Intercept)                 Age        SpeciesHuman          SpeciesOod SpeciesWeepingAngel 
+    #            0.0000000           0.4673875           0.0000000           0.0000000           0.0000000
+    #  > confint(mod, method="Wald")
+    #                             2.5 %       97.5 %
+    #  (Intercept)          898.3764163 1134.1970241
+    #  Age                   -0.2414699    0.1108376
+    #  SpeciesHuman        -500.2194685 -499.1679220
+    #  SpeciesOod          -900.1209556 -899.0176859
+    #  SpeciesWeepingAngel -200.1294926 -199.0484237
 
     describe "#predict" do
       context "with Daru::DataFrame new data input" do
@@ -199,6 +215,45 @@ describe LMM do
             expect(result[i]).to eq(0)
           else
             expect(result[i]/result_from_R[i]).to be_within(1e-2).of(1.0)
+          end
+        end
+      end
+    end
+
+    describe "#fix_ef_z" do
+      it "computes the Wald z statistics correctly" do
+        result_from_R = [16.8932256, -0.7267364, -1862.7453318, -3196.1784666, -723.7044506]
+        result = model_fit.fix_ef_z.values
+        result.each_index { |k| expect(result[k]/result_from_R[k]).to be_within(1e-3).of(1.0) }
+      end
+    end
+
+    describe "#fix_ef_p" do
+      context "with method: :wald" do
+        it "computes the p-values from the Wald test correctly" do
+          result_from_R = [0.0, 0.4673875, 0.0, 0.0, 0.0]
+          result = model_fit.fix_ef_p(method: :wald).values
+          result.each_index do |k| 
+            if result_from_R[k] == 0 then
+              expect(result[k]).to eq(0)
+            else
+              expect(result[k]/result_from_R[k]).to be_within(1e-4).of(1.0)
+            end
+          end
+        end
+      end
+    end
+
+    describe "#fix_ef_conf_int" do
+      context "with method: :wald" do
+        it "computes 95% confidence intervals for the fixed effects correctly" do
+          result_from_R = [ [898.3764163, 1134.1970241], [-0.2414699, 0.1108376], 
+                            [-500.2194685, -499.1679220], [-900.1209556, -899.0176859],
+                            [-200.1294926, -199.0484237] ]
+          result = model_fit.fix_ef_conf_int(level: 0.95, method: :wald).values
+          result.each_index do |k| 
+            expect(result[k][0]/result_from_R[k][0]).to be_within(1e-3).of(1.0)
+            expect(result[k][1]/result_from_R[k][1]).to be_within(1e-3).of(1.0)
           end
         end
       end
