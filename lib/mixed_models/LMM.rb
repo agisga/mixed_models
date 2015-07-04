@@ -629,4 +629,142 @@ class LMM
 
     return y.to_flat_a
   end
+
+  # Predictions and corresponding confidence or prediction intervals computed from the fitted 
+  # model on new data. The intervals are computed based on the normal approximation.
+  #
+  # A confidence interval is an interval estimate of the mean value of the response for given 
+  # covariates (i.e. a population parameter). A prediction interval is an interval estimate of 
+  # a future observation. For further explanation of this distinction see for example: 
+  # https://stat.ethz.ch/education/semesters/ss2010/seminar/06_Handout.pdf
+  #
+  # Note that both, confidence and prediction intervals, do not take the uncertainty in the
+  # random effects estimates in to account. That is, if X is the design matrix, beta is the 
+  # vector of fixed effects coefficient, and beta0 is the obtained estimate for beta, then the 
+  # confidence and prediction intervals are centered at X*beta0.
+  #
+  # The data can be either supplied as a Daru::DataFrame object +newdata+, or as raw design 
+  # matrix +x+ for the fixed effects. If both, +newdata+ and +x+ are passed, then an error 
+  # message is thrown. If neither is passed, then the results are computed for the data that 
+  # was used to fit the model. If prediction rather than confidence intervals are desired, and 
+  # +x+ is used rather than +newdata+, then a random effects model matrix +z+ needs to be passed
+  # as well.
+  #
+  # Returned is a Hash containing an Array of predictions, an Array of lower interval bounds, 
+  # and an Array of upper interval bounds.
+  #
+  # === Arguments
+  #
+  # * +newdata+ - a Daru::DataFrame object containing the data for which the predictions
+  #               will be evaluated
+  # * +x+       - fixed effects model matrix, a NMatrix object
+  # * +z+       - random effects model matrix, a NMatrix object
+  # * +level+   - confidence level, a number between 0 and 1
+  # * +type+    - +:confidence+ or +:prediction+ for confidence and prediction intervals
+  #               respectively; see above for explanation of their difference
+  #
+  def predict_with_intervals(newdata: nil, x: nil, z: nil, level: 0.95, type: confidence)
+    raise(ArgumentError, "EITHER pass newdata OR x OR nothing") if newdata && x
+    raise(ArgumentError, "If you pass z you need to pass x as well") if z && x.nil?
+    raise(ArgumentError, "type should be :confidence or :prediction") unless (type == :confidence || type == :prediction)
+
+    input_type = if x then
+                   :from_raw
+                 elsif newdata then
+                   :from_daru
+                 end
+
+    ######################################################################
+    # Obtain the design matrix +x+ and the predictions as point estimates
+    ######################################################################
+
+    # predict from raw model matrices
+    case input_type
+    when :from_raw
+      y = x.dot(@model_data.beta)
+    when :from_daru
+      raise(ArgumentError, "LMM#predict does not work with a Daru::DataFrame," +
+            "if the model was not fit using a Daru::DataFrame") if @from_daru_args.nil?
+      # to prevent side effects on these parameters:
+      fe = Marshal.load(Marshal.dump(@from_daru_args[:fixed_effects]))
+      re = Marshal.load(Marshal.dump(@from_daru_args[:random_effects]))
+      gr = Marshal.load(Marshal.dump(@from_daru_args[:grouping]))
+    
+      adjusted = MixedModels::adjust_lmm_from_daru_inputs(fixed_effects: fe, random_effects: re,
+                                                          grouping: gr, data: newdata)
+      newdata    = adjusted[:data]
+      fe, re, gr = adjusted[:fixed_effects], adjusted[:random_effects], adjusted[:grouping]
+      x_frame    = newdata[*@fix_ef_names]
+      x          = x_frame.to_nm
+      y          = x.dot(@model_data.beta)
+    else
+      # predict on the data that was used to fit the model
+      x = @model_data.x
+      y = x.dot(@model_data.beta)
+    end
+
+    # add the offset
+    y += @model_data.offset 
+
+    ###########################################################
+    # Obtain the random effects model matrix +z+, if necessary
+    ###########################################################
+    
+    if type == :prediction then
+      case input_type
+      when :from_raw
+        raise(ArgumentError, "EITHER pass z OR set type to be :confidence") if z.nil?
+      when :from_daru
+        num_groups     = gr.length
+        ran_ef_raw_mat = Array.new
+        ran_ef_grp     = Array.new
+        num_ran_ef     = Array.new
+        num_grp_levels = Array.new
+        0.upto(num_groups-1) do |i|
+          xi_frame = newdata[*re[i]]
+          ran_ef_raw_mat[i] = xi_frame.to_nm
+          ran_ef_grp[i] = newdata[gr[i]].to_a
+          num_ran_ef[i] = ran_ef_raw_mat[i].shape[1]
+          num_grp_levels[i] = ran_ef_grp[i].uniq.length
+        end
+        z = MixedModels::mk_ran_ef_model_matrix(ran_ef_raw_mat, ran_ef_grp, re)[:z]
+      else
+        # use the data that was used to fit the model
+        z = @model_data.zt.transpose
+      end
+    end
+
+    #######################################
+    # Compute the intervals
+    #######################################
+    
+    y = y.to_flat_a
+
+    # Array of standard deviations for the confidence intervals
+    y_sd    = Array.new
+    cov_mat = (x.dot self.fix_ef_cov_mat).dot x.transpose
+    y.each_index { |i| y_sd[i] = Math::sqrt(cov_mat[i,i]) }
+    # Adjust the standard deviations for the prediction intervals
+    if type == :prediction then
+      unless (@model_data.weights.nil? || @model_data.weights.all? { |w| w == 1 }) then
+        raise(ArgumentError, "Cannot construct prediction intervals" +
+                             "if the model was fit with prior weights (other than all ones)")
+      end
+      z_sigma_zt = (z.dot @sigma_mat).dot z.transpose
+      y.each_index { |i| y_sd[i] += Math::sqrt(z_sigma_zt[i,i]) + @sigma2 }
+    end
+
+    # Use normal approximations to compute intervals
+    alpha = 1.0 - level
+    z = Distribution::Normal.p_value(alpha/2.0).abs
+    y_lower, y_upper = Array.new, Array.new
+    y.each_index do |i| 
+      y_lower[i] = y[i] - z * y_sd[i]
+      y_upper[i] = y[i] + z * y_sd[i]
+    end
+
+    return {pred: y, 
+            "lower#{(level*100).to_int}".to_sym => y_lower,
+            "upper#{(level*100).to_int}".to_sym => y_upper}
+  end
 end

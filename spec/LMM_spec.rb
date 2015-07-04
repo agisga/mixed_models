@@ -1,6 +1,6 @@
 require 'mixed_models'
 
-#TODO: add better spec for LMM#sigma_mat; add spec for LMM#fitted, LMM#residuals, LMM#sse
+#TODO: add better spec for LMM#sigma_mat; add spec for LMM#fitted, LMM#residuals, LMM#sse, LMM#predict_with_intervals, LMM#predict without x or newdata input
 
 describe LMM do
 
