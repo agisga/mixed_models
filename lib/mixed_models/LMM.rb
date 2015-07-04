@@ -663,7 +663,7 @@ class LMM
   # * +type+    - +:confidence+ or +:prediction+ for confidence and prediction intervals
   #               respectively; see above for explanation of their difference
   #
-  def predict_with_intervals(newdata: nil, x: nil, z: nil, level: 0.95, type: confidence)
+  def predict_with_intervals(newdata: nil, x: nil, z: nil, level: 0.95, type: :confidence)
     raise(ArgumentError, "EITHER pass newdata OR x OR nothing") if newdata && x
     raise(ArgumentError, "If you pass z you need to pass x as well") if z && x.nil?
     raise(ArgumentError, "type should be :confidence or :prediction") unless (type == :confidence || type == :prediction)
