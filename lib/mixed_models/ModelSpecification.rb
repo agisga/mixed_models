@@ -177,12 +177,12 @@ module MixedModels
   end
 
   # For internal use in LMM#from_daru and LMM#predict (and maybe other LMM methods).
-  # Adjusts +data+, +fixed_effects+, +random_effects+ and +grouping+ for categorical 
-  # variables, interaction effects and nested grouping factors. The categorical vectors
-  # in the data frame are replaced with sets of 0-1-valued indicator vectors. New vectors
-  # are added to the data frame for pair-wise interaction effects and for pair-wise nestings.
-  # The names of the fixed and random effects as well as grouping factors are adjusted 
-  # accordingly.
+  # Adjusts +data+, +fixed_effects+, +random_effects+ and +grouping+ for the inclusion 
+  # or exclusion of an intercept term, categorical variables, interaction effects and 
+  # nested grouping factors. The categorical vectors in the data frame are replaced with 
+  # sets of 0-1-valued indicator vectors. New vectors are added to the data frame for 
+  # pair-wise interaction effects and for pair-wise nestings. The names of the fixed 
+  # and random effects as well as grouping factors are adjusted accordingly.
   # Returned is a Hash containing the updated +data+, +fixed_effects+, +random_effects+ 
   # and +grouping+
   #
@@ -195,7 +195,28 @@ module MixedModels
   # * +data+           - Daru::DataFrame object, containing the response, fixed and random 
   #                      effects, as well as the grouping variables
   #
-  def MixedModels.lmm_adjust_data_frame(fixed_effects:, random_effects:, grouping:, data:)
+  def MixedModels.adjust_lmm_from_daru_inputs(fixed_effects:, random_effects:, grouping:, data:)
+    n = data.size
+
+    ##############################################
+    # Does the model include intercept terms?
+    ##############################################
+    
+    if fixed_effects.include? :no_intercept then
+      fixed_effects.delete(:intercept)
+      fixed_effects.delete(:no_intercept)
+    end
+    random_effects.each do |r|
+      if r.include? :no_intercept then
+        r.delete(:intercept)
+        r.delete(:no_intercept)
+      end
+    end
+
+    # add an intercept column to the data frame, 
+    # so the intercept will be used whenever specified
+    data[:intercept] = Array.new(n) {1.0}
+
     #################################################################################
     # Transform categorical (non-numeric) variables to sets of indicator vectors,
     # and update the fixed and random effects names accordingly

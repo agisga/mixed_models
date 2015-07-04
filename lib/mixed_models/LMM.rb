@@ -319,41 +319,23 @@ class LMM
 
     n = data.size
 
-    ##############################################
-    # (1) Does the model include intercept terms?
-    ##############################################
-    
-    if fixed_effects.include? :no_intercept then
-      fixed_effects.delete(:intercept)
-      fixed_effects.delete(:no_intercept)
-    end
-    random_effects.each do |r|
-      if r.include? :no_intercept then
-        r.delete(:intercept)
-        r.delete(:no_intercept)
-      end
-    end
-
-    # add an intercept column to the data frame, 
-    # so the intercept will be used whenever specified
-    data[:intercept] = Array.new(n) {1.0}
-
     ################################################################
-    # (2) Adjust +data+, +fixed_effects+, +random_effects+ and 
-    # +grouping+ for categorical variables, interaction effects and 
-    # nested grouping factors
+    # Adjust +data+, +fixed_effects+, +random_effects+ and 
+    # +grouping+ for inclusion or exclusion of an intercept term, 
+    # categorical variables, interaction effects and nested 
+    # grouping factors
     ################################################################
 
-    adjusted = MixedModels::lmm_adjust_data_frame(fixed_effects: fixed_effects, 
-                                                  random_effects: random_effects, 
-                                                  grouping: grouping, data: data)
+    adjusted = MixedModels::adjust_lmm_from_daru_inputs(fixed_effects: fixed_effects, 
+                                                        random_effects: random_effects, 
+                                                        grouping: grouping, data: data)
     fixed_effects  = adjusted[:fixed_effects]
     random_effects = adjusted[:random_effects]
     grouping       = adjusted[:grouping]
     data           = adjusted[:data]
 
     ################################################################
-    # (3) Construct model matrices and vectors, covariance function,
+    # Construct model matrices and vectors, covariance function,
     # and optimization parameters 
     ################################################################
 
@@ -399,7 +381,7 @@ class LMM
     lower_bound = tmp1 + tmp2
 
     ####################
-    # (4) Fit the model
+    # Fit the model
     ####################
 
     return LMM.new(x: x, y: y, zt: z.transpose,
@@ -610,22 +592,8 @@ class LMM
       re = Marshal.load(Marshal.dump(@from_daru_args[:random_effects]))
       gr = Marshal.load(Marshal.dump(@from_daru_args[:grouping]))
     
-      # adjust the data just like in #from_daru
-      if fe.include? :no_intercept then
-        fe.delete(:intercept)
-        fe.delete(:no_intercept)
-      end
-      re.each do |r|
-        if r.include? :no_intercept then
-          r.delete(:intercept)
-          r.delete(:no_intercept)
-        end
-      end
-
-      n = newdata.size
-      newdata[:intercept] = Array.new(n) {1.0}
-      adjusted = MixedModels::lmm_adjust_data_frame(fixed_effects: fe, random_effects: re,
-                                                    grouping: gr, data: newdata)
+      adjusted = MixedModels::adjust_lmm_from_daru_inputs(fixed_effects: fe, random_effects: re,
+                                                          grouping: gr, data: newdata)
       newdata = adjusted[:data]
       fe, re, gr = adjusted[:fixed_effects], adjusted[:random_effects], adjusted[:grouping]
       
