@@ -1,6 +1,6 @@
 require 'mixed_models'
 
-#TODO: add better spec for LMM#sigma_mat; add spec for LMM#fitted, LMM#residuals, LMM#sse, LMM#predict_with_intervals, LMM#predict without x or newdata input
+#TODO: add better spec for LMM#sigma_mat; add spec for LMM#fitted, LMM#residuals, LMM#sse, LMM#predict without x or newdata input
 
 describe LMM do
 
@@ -120,17 +120,37 @@ describe LMM do
     # compare the obtained estimates to the ones obtained for the same data 
     # by the function lmer from the package lme4 in R:
     #
-    #  > mod <- lmer("Aggression~Age+Species+(Age|Location)", data=alien.species)
+    #  > mod <- lmer(Aggression~Age+Species+(Age|Location), data=alien.species)
+    #  
+    #  # predictions
     #  > newdata <- read.table("alien_species_newdata.csv",sep=",", header=T)
     #  > predict(mod, newdata)
     #            1           2           3           4           5           6           7           8           9          10 
     #  1070.912575  182.452063  -17.064468  384.788159  876.124072  674.711338 1092.698558  871.150884  687.462998   -4.016258 
-    #  > predict(mod, newdata, re.form=NA)
+    #  > pred <- predict(mod, newdata, re.form=NA)
+    #  > pred
     #          1         2         3         4         5         6         7         8         9        10 
     #  1002.6356  110.8389  105.4177  506.5997  800.0421  799.9768 1013.8700  807.1616  808.4026  114.0394 
+    #
+    #  # confidence intervals for the predictions
+    #  > newdata$Aggression <- 0 
+    #  > m <- model.matrix(terms(mod), newdata)
+    #  > pred.stdev <- sqrt(diag(m %*% tcrossprod(vcov(mod),m)))
+    #  # lower bounds of 88% CI
+    #  > pred - qnorm(1-0.06) * pred.stdev
+    #          1         2         3         4         5         6         7         8         9        10 
+    #  906.32839  17.21062  10.21883 411.90672 701.96039 701.85218 920.50198 712.62678 714.24725  20.67199 
+    #  # upper bounds of 88% CI
+    #  > pred + qnorm(1-0.06) * pred.stdev
+    #          1         2         3         4         5         6         7         8         9        10 
+    #  1098.9429  204.4673  200.6166  601.2926  898.1239  898.1015 1107.2381  901.6964  902.5580  207.4069 
+    #
+    #  # prediction intervals
+    #
     #  # standard deviations of the fixed effects estimates
     #  > sqrt(diag(vcov(mod)))
     #  [1] 60.15942377  0.08987599  0.26825658  0.28145153  0.27578794
+    #
     #  # covariance matrix of the random effects coefficient estimates
     #  > vcov(mod)
     #  5 x 5 Matrix of class "dpoMatrix"
@@ -140,9 +160,10 @@ describe LMM do
     #  SpeciesHuman          -0.02558786 -4.303052e-05  7.196159e-02  3.351678e-02        3.061001e-02
     #  SpeciesOod            -0.02882389 -3.332581e-05  3.351678e-02  7.921496e-02        3.165401e-02
     #  SpeciesWeepingAngel   -0.03208552  4.757580e-06  3.061001e-02  3.165401e-02        7.605899e-02
+    #
+    #  # conditional covariance matrix of the random effects estimates
     #  > re <- ranef(mod, condVar=TRUE)
     #  > m <- attr(re[[1]], which='postVar')
-    #  # conditional covariance matrix of the random effects estimates
     #  > bdiag(m[,,1],m[,,2],m[,,3])
     #    6 x 6 sparse Matrix of class "dgCMatrix"
     #                                                                              
@@ -152,6 +173,8 @@ describe LMM do
     #    [4,]  .             .            -0.0008651231  4.845105e-06  .             .           
     #    [5,]  .             .             .             .             0.1481118862 -7.468634e-04
     #    [6,]  .             .             .             .            -0.0007468634  4.748243e-06
+    #
+    #  # Wald Z-test for fixed effects coefficients
     #  > vc = vcov(mod)
     #  > z = fixef(mod) / sqrt(diag(vc))
     #  > z
@@ -161,6 +184,8 @@ describe LMM do
     #  > pval
     #          (Intercept)                 Age        SpeciesHuman          SpeciesOod SpeciesWeepingAngel 
     #            0.0000000           0.4673875           0.0000000           0.0000000           0.0000000
+    #
+    #  # Confidence intervals for fixed effects coefficients
     #  > confint(mod, method="Wald")
     #                             2.5 %       97.5 %
     #  (Intercept)          898.3764163 1134.1970241
@@ -185,6 +210,24 @@ describe LMM do
                            799.9768, 1013.8700, 807.1616, 808.4026, 114.0394]
           predictions = model_fit.predict(newdata: newdata, with_ran_ef: false)
           predictions.each_with_index { |p,i| expect(p).to be_within(1e-4).of(result_from_R[i]) }
+        end
+      end
+    end
+
+    describe "#predict_with_intervals" do
+      context "with DaruDataFrame newdata" do
+        context "using type: :confidence" do
+          let(:newdata) { Daru::DataFrame.from_csv("spec/data/alien_species_newdata.csv") }
+
+          it "computes confidence intervals for predictions correctly" do
+            lower88_from_R = [906.32839, 17.21062, 10.21883,411.90672,701.96039,701.85218,920.50198,712.62678,714.24725, 20.67199] 
+            upper88_from_R = [1098.9429, 204.4673, 200.6166, 601.2926, 898.1239, 898.1015,1107.2381, 901.6964, 902.5580, 207.4069]
+            result = model_fit.predict_with_intervals(newdata: newdata, level: 0.88, type: :confidence)
+            result[:lower88].each_with_index { |l,i| expect(l/lower88_from_R[i]).to be_within(1e-2).of(1.0) }
+            result[:upper88].each_with_index { |u,i| expect(u/upper88_from_R[i]).to be_within(1e-2).of(1.0) }
+          end
+          
+          # a unit test for prediction intervals is implemented form raw model matrices below
         end
       end
     end
@@ -354,6 +397,62 @@ describe LMM do
     #  predict(lmer.fit, newdata, re.form=NA)
     #  #           1           2           3           4           5 
     #  #    6.244062   63.454747    1.721348 -106.515678   16.136812 
+    # 
+    #  # prediction intervals on data that was used to fit the model
+    #  yhat <- X %*% fixef(lmer.fit)  
+    #  t(yhat)
+    #  #          [,1]     [,2]     [,3]     [,4]     [,5]     [,6]     [,7]     [,8]
+    #  # [1,] 3.900173 5.000591 6.101008 7.201425 8.301842 9.402259 10.50268 11.60309
+    #  #          [,9]    [,10]    [,11]    [,12]    [,13]   [,14]    [,15]    [,16]
+    #  # [1,] 12.70351 13.80393 14.90434 16.00476 17.10518 18.2056 19.30601 20.40643
+    #  #         [,17]    [,18]    [,19]   [,20]    [,21]    [,22]    [,23]    [,24]
+    #  # [1,] 21.50685 22.60726 23.70768 24.8081 25.90852 27.00893 28.10935 29.20977
+    #  #         [,25]   [,26]    [,27]    [,28]    [,29]    [,30]    [,31]   [,32]
+    #  # [1,] 30.31018 31.4106 32.51102 33.61144 34.71185 35.81227 36.91269 38.0131
+    #  #         [,33]    [,34]    [,35]    [,36]    [,37]    [,38]    [,39]    [,40]
+    #  # [1,] 39.11352 40.21394 41.31435 42.41477 43.51519 44.61561 45.71602 46.81644
+    #  #         [,41]    [,42]    [,43]    [,44]    [,45]    [,46]    [,47]    [,48]
+    #  # [1,] 47.91686 49.01727 50.11769 51.21811 52.31853 53.41894 54.51936 55.61978
+    #  #         [,49]    [,50]
+    #  # [1,] 56.72019 57.82061
+    #  tmp <- VarCorr(lmer.fit)$grp
+    #  Sigma.mat <- bdiag(tmp,tmp,tmp,tmp,tmp)
+    #  pred.var <- diag(X %*% tcrossprod(vcov(lmer.fit),X)) + 
+    #              diag(as.matrix(Z) %*% tcrossprod(Sigma.mat, Z)) + 
+    #              sigma(lmer.fit)^2
+    #  pred.sd <- sqrt(pred.var)
+    #  #lower 95% CI
+    #  t(yhat - qnorm(0.975) * pred.sd) 
+    #  #           [,1]    [,2]      [,3]      [,4]       [,5]      [,6]      [,7]
+    #  # [1,] -4.754873 -3.5758 -2.493847 -1.508396 -0.6157143 0.1904709 0.9181226
+    #  #          [,8]     [,9]    [,10]    [,11]    [,12]    [,13]    [,14]    [,15]
+    #  # [1,] 1.575996 2.172884 2.717093 3.216141 3.676635 4.104267 4.503878 4.879549
+    #  #         [,16]    [,17]    [,18]    [,19]    [,20]   [,21]    [,22]    [,23]
+    #  # [1,] 5.234712 5.572243 5.894558 6.203684 6.501333 6.78895 7.067761 7.338811
+    #  #         [,24]    [,25]    [,26]    [,27]    [,28]    [,29]    [,30]    [,31]
+    #  # [1,] 7.602995 7.861079 8.113725 8.361506 8.604919 8.844399 9.080326 9.313033
+    #  #         [,32]    [,33]    [,34]    [,35]    [,36]    [,37]    [,38]  [,39]
+    #  # [1,] 9.542814 9.769931 9.994614 10.21707 10.43748 10.65601 10.87281 11.088
+    #  #         [,40]    [,41]    [,42]    [,43]   [,44]    [,45]    [,46]    [,47]
+    #  # [1,] 11.30172 11.51406 11.72513 11.93502 12.1438 12.35155 12.55833 12.76422
+    #  #         [,48]    [,49]    [,50]
+    #  # [1,] 12.96926 13.17351 13.37701
+    #  #upper 95% CI
+    #  t(yhat + qnorm(0.975) * pred.sd)
+    #  #          [,1]     [,2]     [,3]     [,4]    [,5]     [,6]     [,7]     [,8]
+    #  # [1,] 12.55522 13.57698 14.69586 15.91125 17.2194 18.61405 20.08723 21.63019
+    #  #          [,9]    [,10]    [,11]    [,12]    [,13]    [,14]    [,15]    [,16]
+    #  # [1,] 23.23414 24.89076 26.59255 28.33289 30.10609 31.90731 33.73248 35.57815
+    #  #         [,17]    [,18]    [,19]    [,20]    [,21]   [,22]    [,23]    [,24]
+    #  # [1,] 37.44145 39.31997 41.21168 43.11486 45.02808 46.9501 48.87989 50.81654
+    #  #         [,25]    [,26]    [,27]    [,28]    [,29]    [,30]    [,31]    [,32]
+    #  # [1,] 52.75929 54.70748 56.66053 58.61795 60.57931 62.54421 64.51234 66.48339
+    #  #         [,33]    [,34]    [,35]    [,36]    [,37]    [,38]    [,39]    [,40]
+    #  # [1,] 68.45711 70.43326 72.41164 74.39206 76.37437 78.35841 80.34404 82.33116
+    #  #         [,41]    [,42]    [,43]    [,44]    [,45]    [,46]   [,47]    [,48]
+    #  # [1,] 84.31965 86.30942 88.30037 90.29242 92.28551 94.27955 96.2745 98.27029
+    #  #         [,49]    [,50]
+    #  # [1,] 100.2669 102.2642
 
     describe "#initialize" do
       it "estimates the fixed effects terms correctly" do
@@ -417,6 +516,20 @@ describe LMM do
           result_from_R = [6.244062, 63.454747, 1.721348, -106.515678, 16.136812]
           predictions = model_fit.predict(x: x, z: z, with_ran_ef: false)
           predictions.each_with_index { |p,i| expect(p).to be_within(1e-2).of(result_from_R[i]) }
+        end
+      end
+    end
+
+    describe "#predict_with_intervals" do
+      context "from original (old) data" do
+        context "using type: :prediction" do
+          it "computes prediction intervals correctly" do
+            lower95_from_R = [-4.754873, -3.5758, -2.493847, -1.508396, -0.6157143, 0.1904709, 0.9181226, 1.575996, 2.172884, 2.717093, 3.216141, 3.676635, 4.104267, 4.503878, 4.879549,5.234712,5.572243,5.894558,6.203684,6.501333,6.78895,7.067761,7.338811,7.602995,7.861079,8.113725,8.361506,8.604919,8.844399,9.080326,9.313033,9.542814,9.769931,9.994614,10.21707,10.43748,10.65601,10.87281,11.088,11.30172,11.51406,11.72513,11.93502,12.1438,12.35155,12.55833,12.76422,12.96926,13.17351,13.37701]
+            upper95_from_R = [12.55522,13.57698,14.69586,15.91125,17.2194,18.61405,20.08723,21.63019,23.23414,24.89076,26.59255,28.33289,30.10609,31.90731,33.73248,35.57815,37.44145,39.31997,41.21168,43.11486,45.02808,46.9501,48.87989,50.81654,52.75929,54.70748,56.66053,58.61795,60.57931,62.54421,64.51234,66.48339,68.45711,70.43326,72.41164,74.39206,76.37437,78.35841,80.34404,82.33116,84.31965,86.30942,88.30037,90.29242,92.28551,94.27955,96.2745,98.27029,100.2669,102.2642]
+            result = model_fit.predict_with_intervals(level: 0.95, type: :prediction)
+            result[:lower95].each_with_index { |l,i| expect(l).to be_within(1e-2).of(lower95_from_R[i]) }
+            result[:upper95].each_with_index { |u,i| expect(u).to be_within(1e-2).of(upper95_from_R[i]) }
+          end
         end
       end
     end

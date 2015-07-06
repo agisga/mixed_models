@@ -740,19 +740,22 @@ class LMM
     
     y = y.to_flat_a
 
-    # Array of standard deviations for the confidence intervals
-    y_sd    = Array.new
+    # Array of variances for the confidence intervals
+    y_var   = Array.new
     cov_mat = (x.dot self.fix_ef_cov_mat).dot x.transpose
-    y.each_index { |i| y_sd[i] = Math::sqrt(cov_mat[i,i]) }
-    # Adjust the standard deviations for the prediction intervals
+    y.each_index { |i| y_var[i] = cov_mat[i,i] }
+    # Adjust the variances for the prediction intervals
     if type == :prediction then
       unless (@model_data.weights.nil? || @model_data.weights.all? { |w| w == 1 }) then
         raise(ArgumentError, "Cannot construct prediction intervals" +
                              "if the model was fit with prior weights (other than all ones)")
       end
       z_sigma_zt = (z.dot @sigma_mat).dot z.transpose
-      y.each_index { |i| y_sd[i] += Math::sqrt(z_sigma_zt[i,i]) + @sigma2 }
+      y.each_index { |i| y_var[i] += z_sigma_zt[i,i] + @sigma2 }
     end
+    # Array of standard deviations
+    y_sd = Array.new
+    y.each_index { |i| y_sd[i] = Math::sqrt(y_var[i]) }
 
     # Use normal approximations to compute intervals
     alpha = 1.0 - level
