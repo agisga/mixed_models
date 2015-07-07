@@ -397,8 +397,19 @@ class LMM
   # An Array containing the fitted response values, i.e. the estimated mean of the response
   # (conditional on the estimates of the covariance parameters, the random effects,
   # and the fixed effects).
-  def fitted
-    @model_data.mu.to_flat_a
+  #
+  # === Arguments
+  #
+  # * +with_ran_ef+ - specifies if random effects coefficients should be used; i.e. whether
+  #                   the returned value is X*beta or X*beta+Z*b, where beta are the fixed
+  #                   and b the random effects coefficients; default is true 
+  #                   
+  def fitted(with_ran_ef: true)
+    if with_ran_ef then
+      @model_data.mu.to_flat_a
+    else
+      @model_data.x.dot(@model_data.beta)
+    end
   end
 
   # An Array containing the model residuals, which are defined as the difference between the
