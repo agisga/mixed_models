@@ -36,6 +36,8 @@ Feel free to contact me at alexej [dot] go [at] googlemail [dot] com, in case of
 
 ## Some relevant BLOG posts
 
+* [Wald p-values and confidence intervals for fixed effects coefficients](http://agisga.github.io/MixedModels_p_values_and_CI/)
+
 * [Fitting linear mixed models with a user-friendly R-formula-like interface](http://agisga.github.io/MixedModels_from_formula/)
 
 * [A rudimentary linear mixed models fit from raw matrices and vectors](http://agisga.github.io/First-linear-mixed-model-fit/)
