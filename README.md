@@ -34,6 +34,14 @@ Ruby is required in version >=2.0 because keyword arguments are excessively used
 
 Feel free to contact me at alexej [dot] go [at] googlemail [dot] com, in case of difficulties with the installation.
 
+## Usage Examples
+
+[This IRuby notebook](http://nbviewer.ipython.org/github/agisga/mixed_models/blob/master/notebooks/LMM.ipynb) shows an example linear mixed model fit and most of the methods available for objects of class `LMM`.
+
+Some other examples in form of Ruby code can be found in [the examples folder](https://github.com/agisga/mixed_models/tree/master/examples).
+
+Further examples can be found in several BLOG posts (see below).
+
 ## Some relevant BLOG posts
 
 * [Wald p-values and confidence intervals for fixed effects coefficients](http://agisga.github.io/MixedModels_p_values_and_CI/)
