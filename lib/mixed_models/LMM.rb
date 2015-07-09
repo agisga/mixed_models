@@ -408,7 +408,7 @@ class LMM
     if with_ran_ef then
       @model_data.mu.to_flat_a
     else
-      @model_data.x.dot(@model_data.beta)
+      @model_data.x.dot(@model_data.beta).to_flat_a
     end
   end
 
