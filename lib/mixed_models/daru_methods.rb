@@ -1,4 +1,5 @@
 require 'nmatrix'
+require 'nmatrix/atlas'
 require 'daru'
 
 module Daru

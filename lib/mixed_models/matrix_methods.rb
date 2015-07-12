@@ -1,4 +1,5 @@
 require 'nmatrix'
+require 'nmatrix/atlas'
 
 class NMatrix
 

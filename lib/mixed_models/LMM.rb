@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Alexej Gossmann 
  
 require 'nmatrix'
+require 'nmatrix/atlas'
 require 'daru'
 require 'distribution'
 
