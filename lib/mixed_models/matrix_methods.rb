@@ -1,5 +1,3 @@
-require 'nmatrix'
-
 class NMatrix
 
   # Compute the the Kronecker product of two row vectors (NMatrix of shape [1,n])

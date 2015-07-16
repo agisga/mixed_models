@@ -1,7 +1,7 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'mixed_models/version'
+require 'mixed_models/version.rb'
 
 Gem::Specification.new do |spec|
   spec.name          = "mixed_models"
@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
 
   spec.summary       = %q{Mixed effects models in Ruby}
   spec.description   = %q{Fit statistical linear models with fixed and mixed (random) effects in Ruby}
-  spec.homepage      = "https://github.com/agisga/MixedModels.git"
+  spec.homepage      = "https://github.com/agisga/mixed_models.git"
   spec.license       = "BSD-3-Clause"
 
   # Prevent pushing this gem to RubyGems.org by setting 'allowed_push_host', or
@@ -31,7 +31,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake", "~> 10.0"
   spec.add_development_dependency "rspec", "~> 3.2"
 
-  spec.add_dependency "nmatrix", "~> 0.1.0"
+  spec.add_dependency "nmatrix"#, "~> 0.1.0"
   spec.add_dependency "daru", "~> 0.1.0"
   spec.add_dependency "distribution", "~> 0.7.3"
 

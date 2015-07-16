@@ -1,9 +1,5 @@
 # Copyright (c) 2015 Alexej Gossmann 
  
-require 'nmatrix'
-require 'daru'
-require 'distribution'
-
 # Linear mixed effects models.
 # The implementation is based on Bates et al. (2014)
 #

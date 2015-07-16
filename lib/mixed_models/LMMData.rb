@@ -1,7 +1,5 @@
 # Copyright (c) 2015 Alexej Gossmann 
  
-require 'nmatrix'
-
 # A class to store all the information required to fit a linear mixed model and the 
 # results of the model fit.
 # The implementation is partially based on Bates et al. (2014) and the corresponding

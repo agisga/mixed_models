@@ -1,6 +1,3 @@
-require 'nmatrix'
-require 'daru'
-
 module Daru
   class DataFrame
     # Transform a Daru::DataFrame into a NMatrix
