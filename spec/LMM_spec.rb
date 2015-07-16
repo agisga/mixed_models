@@ -699,12 +699,14 @@ describe LMM do
         it "names the fixed effects correctly" do
           fix_ef_names = [:intercept, :x_lvl_B, :x_lvl_C]
           expect(model_fit.fix_ef.keys).to eq(fix_ef_names)
+          expect(model_fit.fix_ef_names).to eq(fix_ef_names)
         end
 
         it "names the random effects correctly" do
           ran_ef_names = [:x_lvl_A_g1, :x_lvl_B_g1, :x_lvl_C_g1, 
                           :x_lvl_A_g2, :x_lvl_B_g2, :x_lvl_C_g2]
           expect(model_fit.ran_ef.keys).to eq(ran_ef_names)
+          expect(model_fit.ran_ef_names).to eq(ran_ef_names)
         end
       end
 
@@ -756,12 +758,84 @@ describe LMM do
         it "names the fixed effects correctly" do
           fix_ef_names = [:x_lvl_A, :x_lvl_B, :x_lvl_C]
           expect(model_fit.fix_ef.keys).to eq(fix_ef_names)
+          expect(model_fit.fix_ef_names).to eq(fix_ef_names)
         end
 
         it "names the random effects correctly" do
           ran_ef_names = [:intercept_g1, :x_lvl_B_g1, :x_lvl_C_g1, 
                           :intercept_g2, :x_lvl_B_g2, :x_lvl_C_g2]
           expect(model_fit.ran_ef.keys).to eq(ran_ef_names)
+          expect(model_fit.ran_ef_names).to eq(ran_ef_names)
+        end
+      end
+    end
+  end
+
+  context "with interaction effects" do
+    context "two numeric variables" do
+      describe "#from_formula" do
+        subject(:model_fit) do
+          LMM.from_formula(formula: "y ~ a + b + a:b + (0 + a:b | gr)", 
+                           data: Daru::DataFrame.from_csv("spec/data/numeric_x_numeric_interaction.csv"))
+        end
+
+        # result from R for comparison:
+        #  > mod <- lmer(y~a+b+a:b+(0+a:b|gr), data=df)
+        #  > summary(mod)
+        #  Linear mixed model fit by REML ['lmerMod']
+        #  Formula: y ~ a + b + a:b + (0 + a:b | gr)
+        #     Data: df
+        #
+        #  REML criterion at convergence: 312.3
+        #
+        #  Scaled residuals: 
+        #       Min       1Q   Median       3Q      Max 
+        #  -2.76624 -0.68003 -0.07408  0.62803  2.06279 
+        #
+        #  Random effects:
+        #   Groups   Name Variance Std.Dev.
+        #   gr       a:b  0.5451   0.7383  
+        #   Residual      1.1298   1.0629  
+        #  Number of obs: 100, groups:  gr, 5
+        #
+        #  Fixed effects:
+        #              Estimate Std. Error t value
+        #  (Intercept)  0.02967    0.10830   0.274
+        #  a            1.08225    0.10691  10.123
+        #  b            0.96928    0.10242   9.464
+        #  a:b          1.25433    0.34734   3.611
+        #
+        #  Correlation of Fixed Effects:
+        #      (Intr) a      b     
+        #  a    0.043              
+        #  b    0.030 -0.050       
+        #  a:b -0.013 -0.022 -0.027
+        
+        it "finds the minimal REML deviance correctly" do
+          expect(model_fit.deviance).to be_within(1e-1).of(312.3)
+        end
+
+        it "estimates the residual standard deviation correctly" do
+          expect(model_fit.sigma).to be_within(1e-4).of(1.0629)
+        end
+
+        it "estimates the fixed effects terms correctly" do
+          fix_ef_from_R = [0.02967, 1.08225, 0.96928, 1.25433] 
+          model_fit.fix_ef.values.each_with_index do |e, i|
+            expect(e).to be_within(1e-4).of(fix_ef_from_R[i])
+          end
+        end
+
+        it "names the fixed effects correctly" do
+          fix_ef_names = [:intercept, :a, :b, :a_b_interaction]
+          expect(model_fit.fix_ef.keys).to eq(fix_ef_names)
+          expect(model_fit.fix_ef_names).to eq(fix_ef_names)
+        end
+
+        it "names the random effects correctly" do
+          ran_ef_names = [:a_b_interaction_1, :a_b_interaction_2, :a_b_interaction_3, :a_b_interaction_4, :a_b_interaction_5]
+          expect(model_fit.ran_ef.keys).to eq(ran_ef_names)
+          expect(model_fit.ran_ef_names).to eq(ran_ef_names)
         end
       end
     end

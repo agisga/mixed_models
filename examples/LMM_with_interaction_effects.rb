@@ -1,7 +1,7 @@
 require 'mixed_models'
 
 #############################################################################################
-# Model with interaction effects of two numerica variables, in the fixed and random effects # 
+# Model with interaction effects of two numeric variables, in the fixed and random effects # 
 #############################################################################################
 
 df = Daru::DataFrame.from_csv './data/numeric_x_numeric_interaction.csv'
