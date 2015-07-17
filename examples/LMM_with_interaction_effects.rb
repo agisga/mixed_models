@@ -4,15 +4,15 @@ require 'mixed_models'
 # Model with interaction effects of two numeric variables, in the fixed and random effects # 
 #############################################################################################
 
-df = Daru::DataFrame.from_csv './data/numeric_x_numeric_interaction.csv'
+df_num_x_num = Daru::DataFrame.from_csv './data/numeric_x_numeric_interaction.csv'
 
-model_fit = LMM.from_formula(formula: "y ~ a + b + a:b + (0 + a:b | gr)", data: df)
+num_x_num = LMM.from_formula(formula: "y ~ a + b + a:b + (0 + a:b | gr)", data: df_num_x_num)
 
 # Print some results
-puts "REML criterion: \t#{model_fit.deviance}"
+puts "REML criterion: \t#{num_x_num.deviance}"
 puts "Fixed effects:"
-puts model_fit.fix_ef
-puts "Standard deviation: \t#{model_fit.sigma}"
+puts num_x_num.fix_ef
+puts "Standard deviation: \t#{num_x_num.sigma}"
 
 # result from R for comparison:
 #  > mod <- lmer(y~a+b+a:b+(0+a:b|gr), data=df)
@@ -45,3 +45,36 @@ puts "Standard deviation: \t#{model_fit.sigma}"
 #  a    0.043              
 #  b    0.030 -0.050       
 #  a:b -0.013 -0.022 -0.027
+
+#############################################################################################
+# Model with interaction effects of a numeric and a categorical  variable, 
+# in the fixed and random effects  
+#############################################################################################
+
+df_num_x_cat = Daru::DataFrame.from_csv './data/numeric_x_categorical_interaction.csv'
+
+num_x_cat = LMM.from_formula(formula: "y ~ num + cat + num:cat + (0 + num:cat | gr)", data: df_num_x_cat)
+
+# Print some results
+puts "REML criterion: \t#{num_x_cat.deviance}"
+puts "Fixed effects:"
+puts num_x_cat.fix_ef
+puts "Random effects:"
+puts num_x_cat.ran_ef
+puts "Standard deviation: \t#{num_x_cat.sigma}"
+
+# Result from R for comparison
+#  > mod <- lmer(y~num*cat+(0+num:cat|gr), data=df)
+#
+#  > fixef(mod)
+#  (Intercept)         num        catB        catC    num:catB    num:catC 
+#    2.1121836   2.5502758   0.8093798   2.0581310  -0.8488252  -0.7940961 
+#  > ranef(mod)
+#  $gr
+#            num:catA   num:catB    num:catC
+#  case     0.3051041 -0.3758435 -0.04775093
+#  control -0.3051041  0.3758435  0.04775093
+#  > REMLcrit(mod)
+#  [1] 286.3773
+#  > sigma(mod)
+#  [1] 0.9814441

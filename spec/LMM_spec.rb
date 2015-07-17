@@ -827,13 +827,15 @@ describe LMM do
         end
 
         it "names the fixed effects correctly" do
-          fix_ef_names = [:intercept, :a, :b, :a_b_interaction]
+          fix_ef_names = [:intercept, :a, :b, :a_interaction_with_b]
           expect(model_fit.fix_ef.keys).to eq(fix_ef_names)
           expect(model_fit.fix_ef_names).to eq(fix_ef_names)
         end
 
         it "names the random effects correctly" do
-          ran_ef_names = [:a_b_interaction_1, :a_b_interaction_2, :a_b_interaction_3, :a_b_interaction_4, :a_b_interaction_5]
+          ran_ef_names = [:a_interaction_with_b_1, :a_interaction_with_b_2, 
+                          :a_interaction_with_b_3, :a_interaction_with_b_4, 
+                          :a_interaction_with_b_5]
           expect(model_fit.ran_ef.keys).to eq(ran_ef_names)
           expect(model_fit.ran_ef_names).to eq(ran_ef_names)
         end

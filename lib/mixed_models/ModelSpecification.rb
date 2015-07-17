@@ -259,7 +259,7 @@ module MixedModels
     # Proc that adds a new vector to the data frame for an interaction of two numeric vectors,
     # and returns the name of the newly created data frame column
     num_x_num = Proc.new do |ef0, ef1| 
-      inter_name = "#{ef0}_#{ef1}_interaction".to_sym
+      inter_name = "#{ef0}_interaction_with_#{ef1}".to_sym
       unless interaction_names.include? inter_name
         data[inter_name] = data[ef0] * data[ef1] 
         interaction_names.push(inter_name)
@@ -269,11 +269,17 @@ module MixedModels
 
     # Proc that adds new vectors to the data frame for an interaction of a numeric (ef0) and 
     # a categorical (ef1) vector, and returns the names of the newly created data frame columns
-    num_x_cat = Proc.new do |ef0, ef1| 
-      indicator_column_names = new_names[ef1]
+    num_x_cat = Proc.new do |ef0, ef1, has_noninteraction_ef0| 
+      # if ef0 is present as a fixed/random (whichever applicable) effect already,
+      # then first level of the interaction factor should be removed
+      indicator_column_names = if has_noninteraction_ef0 then 
+                                 new_names[ef1][1..-1]
+                               else
+                                 new_names[ef1]
+                               end
       num_x_cat_interactions = Array.new
       indicator_column_names.each do |name|
-        inter_name = "#{ef0}_#{name}_interaction".to_sym
+        inter_name = "#{ef0}_interaction_with_#{name}".to_sym
         unless interaction_names.include? inter_name
           data[inter_name] = data[ef0] * data[name] 
           interaction_names.push(inter_name)
@@ -292,11 +298,13 @@ module MixedModels
             #TODO: implement this!
             raise(NotImplementedError, "interaction effects between two categorical variables not implemented") 
           else
-            fixed_effects[ind..ind] = num_x_cat(ef[1], ef[0])
+            has_noninteraction_ef1 = fixed_effects.include?(ef[1])
+            fixed_effects[ind..ind] = num_x_cat.call(ef[1], ef[0], has_noninteraction_ef1)
           end
         else
           if categorical_names.include? ef[1] then
-            fixed_effects[ind..ind] = num_x_cat(ef[0], ef[1])
+            has_noninteraction_ef0 = fixed_effects.include?(ef[0])
+            fixed_effects[ind..ind] = num_x_cat.call(ef[0], ef[1], has_noninteraction_ef0)
           else
             fixed_effects[ind] = num_x_num.call(ef[0], ef[1])
           end
@@ -314,11 +322,13 @@ module MixedModels
               #TODO: implement this!
               raise(NotImplementedError, "interaction effects between two categorical variables not implemented") 
             else
-              ran_ef[ind..ind] = num_x_cat(ef[1], ef[0])
+              has_noninteraction_ef1 = ran_ef.include?(ef[1])
+              ran_ef[ind..ind] = num_x_cat.call(ef[1], ef[0], has_noninteraction_ef1)
             end
           else
             if categorical_names.include? ef[1] then
-              ran_ef[ind..ind] = num_x_cat(ef[0], ef[1])
+              has_noninteraction_ef0 = ran_ef.include?(ef[0])
+              ran_ef[ind..ind] = num_x_cat.call(ef[0], ef[1], has_noninteraction_ef0)
             else
               ran_ef[ind] = num_x_num.call(ef[0], ef[1])
             end
