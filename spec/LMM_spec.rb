@@ -849,7 +849,7 @@ describe LMM do
                            data: Daru::DataFrame.from_csv("spec/data/numeric_x_categorical_interaction.csv"))
         end
 
-        # Result from R for comparison
+        # Result from R for comparison:
         #  > mod <- lmer(y~num*cat+(0+num:cat|gr), data=df)
         #
         #  > fixef(mod)
@@ -889,6 +889,55 @@ describe LMM do
 
         it "names the fixed effects correctly" do
           fix_ef_names = [:intercept, :num, :cat_lvl_B, :cat_lvl_C,
+                          :num_interaction_with_cat_lvl_B, :num_interaction_with_cat_lvl_C]
+          expect(model_fit.fix_ef.keys).to eq(fix_ef_names)
+          expect(model_fit.fix_ef_names).to eq(fix_ef_names)
+        end
+
+        it "names the random effects correctly" do
+          ran_ef_names = [:num_interaction_with_cat_lvl_A_case, :num_interaction_with_cat_lvl_B_case, 
+                          :num_interaction_with_cat_lvl_C_case, :num_interaction_with_cat_lvl_A_control, 
+                          :num_interaction_with_cat_lvl_B_control, :num_interaction_with_cat_lvl_C_control]
+          expect(model_fit.ran_ef.keys).to eq(ran_ef_names)
+          expect(model_fit.ran_ef_names).to eq(ran_ef_names)
+        end
+      end
+    end
+
+    context "between a categorical and a numeric variable" do
+      describe "#from_formula" do
+        subject(:model_fit) do
+          LMM.from_formula(formula: "y ~ cat + num + cat:num + (0 + cat:num | gr)",
+                           data: Daru::DataFrame.from_csv("spec/data/numeric_x_categorical_interaction.csv"))
+        end
+
+        # Result from R for comparison:
+        # same as previous example
+        
+        it "finds the minimal REML deviance correctly" do
+          expect(model_fit.deviance).to be_within(1e-2).of(286.3773)
+        end
+
+        it "estimates the residual standard deviation correctly" do
+          expect(model_fit.sigma).to be_within(1e-2).of(0.9814441)
+        end
+
+        it "estimates the fixed effects terms correctly" do
+          fix_ef_from_R = [2.1121836, 0.8093798, 2.0581310, 2.5502758, -0.8488252, -0.7940961] 
+          model_fit.fix_ef.values.each_with_index do |e, i|
+            expect(e).to be_within(1e-2).of(fix_ef_from_R[i])
+          end
+        end
+        
+        it "estimates the random effects terms correctly" do
+          ran_ef_from_R = [0.3051041,-0.3758435,-0.04775093,-0.3051041, 0.3758435, 0.04775093]
+          model_fit.ran_ef.values.each_with_index do |e, i|
+            expect(e).to be_within(1e-2).of(ran_ef_from_R[i])
+          end
+        end
+
+        it "names the fixed effects correctly" do
+          fix_ef_names = [:intercept, :cat_lvl_B, :cat_lvl_C, :num,
                           :num_interaction_with_cat_lvl_B, :num_interaction_with_cat_lvl_C]
           expect(model_fit.fix_ef.keys).to eq(fix_ef_names)
           expect(model_fit.fix_ef_names).to eq(fix_ef_names)
