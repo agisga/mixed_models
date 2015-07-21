@@ -65,8 +65,7 @@ module Daru
             ind = "#{name}_lvl_#{l}".to_sym
             col = Array.new
             vec.each { |e| e==l ? col.push(1.0) : col.push(0.0) }
-            vec_for_level_l = Daru::Vector.new(col)
-            self.add_vector(ind, vec_for_level_l)
+            self[ind] = col
             level_indices.push(ind)
           end
           indices[name] = level_indices
