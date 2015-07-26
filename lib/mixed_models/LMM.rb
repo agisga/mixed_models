@@ -421,6 +421,8 @@ class LMM
     s = 0.0
     self.residuals.each { |r| s += r**2 }
     return s
+    # method may be replaced with 
+    # residuals.inject { |sum, r| sum + r**2 }
   end
 
   # Variance-covariance matrix of the estimates of the fixed effects terms, conditional on the
@@ -596,6 +598,8 @@ class LMM
             "if the model was not fit using a Daru::DataFrame") if @from_daru_args.nil?
       # to prevent side effects on these parameters:
       fe = Marshal.load(Marshal.dump(@from_daru_args[:fixed_effects]))
+      # You're using Marshal.load(Marshal.dump(..)) often, maybe have a separate function for it?
+      # I think something like deep_copy(arg) is self-explainable but Marshal.load(Marshal.dump(arg)) not.
       re = Marshal.load(Marshal.dump(@from_daru_args[:random_effects]))
       gr = Marshal.load(Marshal.dump(@from_daru_args[:grouping]))
     

@@ -51,12 +51,13 @@ module MixedModels
   def MixedModels.mk_ran_ef_model_matrix(x, grp, names=nil)
     num_x = x.length  # number of raw random effects matrices
     raise(ArgumentError, "Number of X matrices different than the number of grouping structures") unless num_x == grp.length
-    unless names.nil? || num_x == names.length
+    unless names.nil? || num_x == names.length # maybe 'if names && num_x != names.length' is easier ?
       raise(ArgumentError, "Number of X matrices different than the number of Arrays of column names")
     end
     n = x[0].shape[0] # number of observations in each matrix x[i]
 
     z           = Array.new # Array of matrices where z[i] correponds to x[i] and grp[i]
+    # z = [] is the same
     z_col_names = Array.new # Array whose i'th entry is an Array of column names of z[i]
     z_ncol      = 0 # Number of columns in the ran ef model matrix
     (0...num_x).each do |i|
@@ -65,6 +66,9 @@ module MixedModels
       # sort the levels if possible
       begin
         grp_levels.sort!
+        # Maybe use here
+        # grp_levels = grp[i].uniq.sort
+        # and remove grp_levels assignment above ?
       rescue
         grp_levels = grp[i].uniq
       end
@@ -75,6 +79,8 @@ module MixedModels
       (0...m).each do |j|
         (0...n).each do |k|
           grp_mat[k,j] = (grp[i][k] == grp_levels[j] ? 1.0 : 0.0)
+          # grp_mat already filled with zeroes, why not use
+          # grp_mat[k,j] = 1.0 if grp[i][k] == grp_levels[j]
         end
       end
 
@@ -87,7 +93,7 @@ module MixedModels
       # codes based on indices are used. The names are saved as Symbols for consistency,
       # as the names of the fixed effect terms are Symbols as well. 
       z_col_names[i] = Array.new
-      unless names.nil? then 
+      unless names.nil? then # if names
         grp_levels.each_with_index do |lvl, j|
           names[i].each_with_index do |term, k|
             if term.is_a?(Numeric) || term.is_a?(String) || term.is_a?(Symbol) then 
@@ -104,6 +110,16 @@ module MixedModels
               end
             end
           end
+            # Repeating check for Num\Str\Sym above and if-else statements don't look good
+            # I think check for class may be made as separate function and case may be used
+            # instead of if-else. Something like this:
+            # push_str = case [is_a_NSS(term), is_a_NSS(lvl)]
+            #            when [true, true]
+            #              then "#{term}_#{lvl}"
+            #            when ...
+            #              then ...
+            #            end
+            # z_col_names[i].push(push_str.to_sym)
         end
       end
     end
@@ -119,6 +135,7 @@ module MixedModels
     end
     # concatenate the Arrays z_col_names[i]
     z_model_mat_names = (z_col_names.empty? ? nil : z_col_names.flatten)
+    # Is #flatten here really necessary?
     
     return {z: z_model_mat, names: z_model_mat_names}
   end
@@ -159,6 +176,7 @@ module MixedModels
       # the remaining theta parametrize the off-diagonal entries of the covariance matrix
       th_count = num_ran_ef.sum 
       (0...num_grp_levels.length).each do |i|
+      # num_grp_levels.each_index do |i|
         k = num_ran_ef[i]
         m = num_grp_levels[i]
         lambdat_component = NMatrix.diagonal(theta[th_count_diag...(th_count_diag+k)], 
@@ -212,6 +230,13 @@ module MixedModels
         r.delete(:no_intercept)
       end
     end
+    # Code for fixed and random effects is the same, maybe use
+    # [fixed_effects, *random_effects].each do |ef|
+    #   if ef.include? :no_intercept then
+    #     ef.delete(:intercept)
+    #     ef.delete(:no_intercept)
+    #   end
+    # end
 
     # add an intercept column to the data frame, 
     # so the intercept will be used whenever specified
@@ -229,6 +254,7 @@ module MixedModels
     # names of the corresponding indicator vectors 
     replace_categorical_names = Proc.new do |effects_array|
       reduced = (effects_array.include?(:intercept) ? true : false)
+      # reduced = effects_array.include?(:intercept)
       categorical_names.each do |name|
         ind = effects_array.find_index(name)
         if ind then
@@ -336,6 +362,8 @@ module MixedModels
         end
       end
     end
+    # (1) and (2) seems to be almost the same. Please see comment above at the beginning
+    # of this method regarding :no_intercept.
 
     # (3) Deal with nestings in the random effects
     grouping.each_with_index do |grp, ind|

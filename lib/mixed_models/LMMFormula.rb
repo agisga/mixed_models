@@ -87,6 +87,20 @@ module MixedModels
               else
                 raise "invalid formulation of random effects in LMMFormula"
               end
+              # case
+              # when cc.is_a?(Symbol)
+              #   ran_ef.push(cc)
+              # when cc.is_a?(Array) && cc[0] == "interaction_effect"
+              #   cc.shift
+              #   raise "bi-variate interaction effects allowed only" un$
+              #   ran_ef.push(cc)
+              # else
+              #   raise "invalid ..."
+              # end
+              #
+              # And here is also two almost the same code constructions
+              # one nested into another. Maybe there is a way to reduce
+              # duplication?
             end
             lmm_from_daru_input[:random_effects].push(ran_ef)
           else
