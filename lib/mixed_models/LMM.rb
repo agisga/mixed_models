@@ -418,9 +418,7 @@ class LMM
   # Sum of squared residuals
   #
   def sse
-    s = 0.0
-    self.residuals.each { |r| s += r**2 }
-    return s
+    self.residuals.inject { |sse, r| sse + r**2.0 }
   end
 
   # Variance-covariance matrix of the estimates of the fixed effects terms, conditional on the

@@ -74,16 +74,13 @@ module MixedModels
             lmm_from_daru_input[:grouping].push(c.pop)
             ran_ef = Array.new
             c.each do |cc|
-              if cc.is_a?(Symbol) then
+              case
+              when cc.is_a?(Symbol)
                 ran_ef.push(cc)
-              elsif cc.is_a?(Array) then
-                if cc[0] == "interaction_effect" then
-                  cc.shift
-                  raise "bi-variate interaction effects allowed only" unless cc.length == 2
-                  ran_ef.push(cc)
-                else
-                  raise "invalid formulation of random effects in LMMFormula"
-                end
+              when cc.is_a?(Array) && cc[0] == "interaction_effect"
+                cc.shift
+                raise "bi-variate interaction effects allowed only" unless cc.length == 2
+                ran_ef.push(cc)
               else
                 raise "invalid formulation of random effects in LMMFormula"
               end

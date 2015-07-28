@@ -60,11 +60,9 @@ module MixedModels
     z_col_names = Array.new # Array whose i'th entry is an Array of column names of z[i]
     z_ncol      = 0 # Number of columns in the ran ef model matrix
     (0...num_x).each do |i|
-      grp_levels = grp[i].uniq
-      
       # sort the levels if possible
       begin
-        grp_levels.sort!
+        grp_levels = grp[i].uniq.sort
       rescue
         grp_levels = grp[i].uniq
       end
@@ -74,7 +72,7 @@ module MixedModels
       grp_mat = NMatrix.zeros([n,m], dtype: :float64)
       (0...m).each do |j|
         (0...n).each do |k|
-          grp_mat[k,j] = (grp[i][k] == grp_levels[j] ? 1.0 : 0.0)
+          grp_mat[k,j] = 1.0 if grp[i][k] == grp_levels[j]
         end
       end
 
@@ -86,22 +84,20 @@ module MixedModels
       # Specific names are produced from Numeric, String or Symbol only, otherwise
       # codes based on indices are used. The names are saved as Symbols for consistency,
       # as the names of the fixed effect terms are Symbols as well. 
+      is_NSS = Proc.new { |ind| ind.is_a?(Numeric) || ind.is_a?(String) || ind.is_a?(Symbol) }
       z_col_names[i] = Array.new
-      unless names.nil? then 
+      if names then 
         grp_levels.each_with_index do |lvl, j|
           names[i].each_with_index do |term, k|
-            if term.is_a?(Numeric) || term.is_a?(String) || term.is_a?(Symbol) then 
-              if lvl.is_a?(Numeric) || lvl.is_a?(String) || lvl.is_a?(Symbol) then 
-                z_col_names[i].push "#{term}_#{lvl}".to_sym
-              else
-                z_col_names[i].push "#{term}_grp#{i}_#{j}".to_sym
-              end
+            case [is_NSS.call(term), is_NSS.call(lvl)]
+            when [true, true]
+              z_col_names[i].push "#{term}_#{lvl}".to_sym
+            when [true, false]
+              z_col_names[i].push "#{term}_grp#{i}_#{j}".to_sym
+            when [false, true]
+              z_col_names[i].push "x#{i}_#{k}_#{lvl}".to_sym
             else
-              if lvl.is_a?(Numeric) || lvl.is_a?(String) || lvl.is_a?(Symbol) then 
-                z_col_names[i].push "x#{i}_#{k}_#{lvl}".to_sym
-              else
-                z_col_names[i].push "x#{i}_#{k}_grp#{i}_#{j}".to_sym
-              end
+              z_col_names[i].push "x#{i}_#{k}_grp#{i}_#{j}".to_sym
             end
           end
         end
@@ -158,7 +154,7 @@ module MixedModels
       th_count_diag = 0 
       # the remaining theta parametrize the off-diagonal entries of the covariance matrix
       th_count = num_ran_ef.sum 
-      (0...num_grp_levels.length).each do |i|
+      num_grp_levels.each_index do |i|
         k = num_ran_ef[i]
         m = num_grp_levels[i]
         lambdat_component = NMatrix.diagonal(theta[th_count_diag...(th_count_diag+k)], 
@@ -202,14 +198,10 @@ module MixedModels
     # Does the model include intercept terms?
     ##############################################
     
-    if fixed_effects.include? :no_intercept then
-      fixed_effects.delete(:intercept)
-      fixed_effects.delete(:no_intercept)
-    end
-    random_effects.each do |r|
-      if r.include? :no_intercept then
-        r.delete(:intercept)
-        r.delete(:no_intercept)
+    [fixed_effects, *random_effects].each do |ef|
+      if ef.include? :no_intercept then
+        ef.delete(:intercept)
+        ef.delete(:no_intercept)
       end
     end
 
@@ -225,28 +217,18 @@ module MixedModels
     new_names = data.create_indicator_vectors_for_categorical_vectors!
     categorical_names = new_names.keys
 
-    # Proc that replaces the categorical variable names in effects_array with the
+    # Replace the categorical variable names in non-interaction terms with the
     # names of the corresponding indicator vectors 
-    replace_categorical_names = Proc.new do |effects_array|
-      reduced = (effects_array.include?(:intercept) ? true : false)
+    [fixed_effects, *random_effects].each do |effects_array|
+      reduced = effects_array.include?(:intercept)
       categorical_names.each do |name|
         ind = effects_array.find_index(name)
         if ind then
-          if reduced then
-            effects_array[ind..ind] = new_names[name][1..-1]
-          else
-            effects_array[ind..ind] = new_names[name]
-            reduced = true
-          end
+          effects_array[ind..ind] = reduced ? new_names[name][1..-1] : new_names[name]
+          reduced = true
         end
       end
     end
-
-    # (1) Update non-interaction fixed effects terms names
-    replace_categorical_names.call(fixed_effects)
-
-    # (2) Update non-interaction random effects terms names
-    random_effects.each_index { |i| replace_categorical_names.call(random_effects[i]) }
 
     ################################################################
     # Deal with interaction effects and nested grouping factors
@@ -289,55 +271,28 @@ module MixedModels
       num_x_cat_interactions
     end
 
-    # (1) Deal with interaction effects among the fixed effects terms
-    fixed_effects.each_with_index do |ef, ind|
-      if ef.is_a? Array then
-        raise(NotImplementedError, "interaction effects can only be bi-variate") unless ef.length == 2
-        if categorical_names.include? ef[0] then
-          if categorical_names.include? ef[1] then
-            #TODO: implement this!
-            raise(NotImplementedError, "interaction effects between two categorical variables not implemented") 
-          else
-            has_noninteraction_ef1 = fixed_effects.include?(ef[1])
-            fixed_effects[ind..ind] = num_x_cat.call(ef[1], ef[0], has_noninteraction_ef1)
-          end
-        else
-          if categorical_names.include? ef[1] then
-            has_noninteraction_ef0 = fixed_effects.include?(ef[0])
-            fixed_effects[ind..ind] = num_x_cat.call(ef[0], ef[1], has_noninteraction_ef0)
-          else
-            fixed_effects[ind] = num_x_num.call(ef[0], ef[1])
-          end
-        end
-      end
-    end
-
-    # (2) Deal with interaction effects among the random effects terms
-    random_effects.each do |ran_ef|
-      ran_ef.each_with_index do |ef, ind|
+    # Deal with interaction effects among the fixed and random effects terms
+    [fixed_effects, *random_effects].each do |effects_array|
+      effects_array.each_with_index do |ef, ind|
         if ef.is_a? Array then
           raise(NotImplementedError, "interaction effects can only be bi-variate") unless ef.length == 2
-          if categorical_names.include? ef[0] then
-            if categorical_names.include? ef[1] then
-              #TODO: implement this!
-              raise(NotImplementedError, "interaction effects between two categorical variables not implemented") 
-            else
-              has_noninteraction_ef1 = ran_ef.include?(ef[1])
-              ran_ef[ind..ind] = num_x_cat.call(ef[1], ef[0], has_noninteraction_ef1)
-            end
+          case [categorical_names.include?(ef[0]), categorical_names.include?(ef[1])]
+          when [true, true]
+            raise(NotImplementedError, "interaction effects between two categorical variables not implemented") 
+          when [true, false]
+            has_noninteraction_ef1 = effects_array.include?(ef[1])
+            effects_array[ind..ind] = num_x_cat.call(ef[1], ef[0], has_noninteraction_ef1)
+          when [false, true]
+            has_noninteraction_ef0 = effects_array.include?(ef[0])
+            effects_array[ind..ind] = num_x_cat.call(ef[0], ef[1], has_noninteraction_ef0)
           else
-            if categorical_names.include? ef[1] then
-              has_noninteraction_ef0 = ran_ef.include?(ef[0])
-              ran_ef[ind..ind] = num_x_cat.call(ef[0], ef[1], has_noninteraction_ef0)
-            else
-              ran_ef[ind] = num_x_num.call(ef[0], ef[1])
-            end
+            effects_array[ind] = num_x_num.call(ef[0], ef[1])
           end
         end
       end
     end
 
-    # (3) Deal with nestings in the random effects
+    # Deal with nestings in the random effects
     grouping.each_with_index do |grp, ind|
       if grp.is_a? Array then
         #TODO: implement this!
