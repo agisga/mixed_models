@@ -23,12 +23,12 @@ class LMMData
   # * +y+         - response; a dense NMatrix
   # * +zt+        - transpose of the random effects model matrix; a dense NMatrix
   # * +lambdat+   - upper triangular Cholesky factor of the relative covariance 
-  #                 matrix of the random effects; a dense NMatrix
+  #   matrix of the random effects; a dense NMatrix
   # * +weights+   - optional array of prior weights
   # * +offset+    - offset
   # * +thfun+     - a +Proc+ object that takes in an Array +theta+ and produces
-  #                 the non-zero elements of +lambdat+. The structure of +lambdat+
-  #                 cannot change, only the numerical values.
+  #   the non-zero elements of +lambdat+. The structure of +lambdat+
+  #   cannot change, only the numerical values.
   #
   def initialize(x:, y:, zt:, lambdat:, weights: nil, offset: 0.0, &thfun)
     unless x.is_a?(NMatrix) && y.is_a?(NMatrix) && zt.is_a?(NMatrix) && lambdat.is_a?(NMatrix)
@@ -72,44 +72,73 @@ class LMMData
     @rxtrx = NMatrix.new(xtwx.shape, dtype: :float64)
   end
 
-  # Attribute readers available for the following attributes:
-  #
-  # * +x+         - fixed effects model matrix
-  # * +y+         - response
-  # * +zt+        - transpose of the random effects model matrix
-  # * +lambdat+   - upper triangular Cholesky factor of the
-  #                 relative covariance matrix of the random effects.
-  # * +weights+   - optional array of prior weights
-  # * +offset+    - offset
-  # * +thfun+     - a +Proc+ object that takes a value of +theta+ and produces
-  #                 the non-zero elements of +Lambdat+.  The structure of +Lambdat+
-  #                 cannot change, only the numerical values.
-  # * +n+         - length of +y+, i.e. size of the data
-  # * +p+         - number of columns of +x+, i.e. number of fixed effects covariates
-  # * +q+         - number of rows of +zt+, i.e. number of random effects terms
-  # * +sqrtw+     - diagonal matrix with the square roots of +weights+ on the diagonal
-  # * +ztw+       - matrix product z^T * sqrtw 
-  # * +xtwx+      - matrix product x^T * w * x
-  # * +xtwy+      - matrix product x^T * w * y
-  # * +ztwx+      - matrix product z^T * w * x
-  # * +ztwy+      - matrix product z^T * w * y
-  #
-  attr_reader :x, :y, :zt, :lambdat, :weights, :offset, :thfun, :n, :p, :q, :sqrtw, 
-    :ztw, :xtwx, :xtwy, :ztwx, :ztwy
+  # fixed effects model matrix
+  attr_reader :x
+  # response vector
+  attr_reader :y
+  # transpose of the random effects model matrix
+  attr_reader :zt
+  # upper triangular Cholesky factor of the
+  # relative covariance matrix of the random effects.
+  attr_reader :lambdat
+  # optional array of prior weights
+  attr_reader :weights
+  # offset
+  attr_reader :offset
+  # a +Proc+ object that takes a value of +theta+ and produces
+  # the non-zero elements of +Lambdat+.  The structure of +Lambdat+
+  # cannot change, only the numerical values.
+  attr_reader :thfun
+  # length of +y+, i.e. size of the data
+  attr_reader :n
+  # number of columns of +x+, i.e. number of fixed effects covariates
+  attr_reader :p
+  # number of rows of +zt+, i.e. number of random effects terms
+  attr_reader :q
+  # diagonal matrix with the square roots of +weights+ on the diagonal
+  attr_reader :sqrtw
+  # matrix product z^T * sqrtw 
+  attr_reader :ztw
+  # matrix product x^T * w * x
+  attr_reader :xtwx
+  # matrix product x^T * w * y
+  attr_reader :xtwy
+  # matrix product z^T * w * x
+  attr_reader :ztwx
+  # matrix product z^T * w * y
+  attr_reader :ztwy
 
-  # Attribute readers and writers available for the following attributes.
-  # These attributes will be typically changed during the evaluation of
-  # the deviance function or the REML criterion.
-  #
-  # * +b+       - conditional mean of random effects
-  # * +beta+    - conditional estimate of fixed-effects
-  # * +l+       - lower triangular Cholesky factor of [lambda^T * z^T * w * z * lambda + identity]
-  # * +lambdat+ - upper triangular Cholesky factor of the relative covariance matrix of the random effects.
-  # * +mu+      - conditional mean of response
-  # * +u+       - conditional mean of spherical random effects
-  # * +pwrss+   - penalized weighted residual sum of squares
-  # * +rxtrx+   - cross-product of fixed effect Cholesky factor
-  #
-  attr_accessor :lambdat, :b, :beta, :l, :lambdat, :mu, :u, :pwrss, :rxtrx
+  # conditional mean of random effects
+  # (this attribute will be updated during the evaluation of
+  # the deviance function or the REML criterion)
+  attr_accessor :b
+  # conditional estimate of fixed-effects
+  # (this attribute will be updated during the evaluation of
+  # the deviance function or the REML criterion)
+  attr_accessor :beta
+  # lower triangular Cholesky factor of [lambda^T * z^T * w * z * lambda + identity]
+  # (this attribute will be updated during the evaluation of
+  # the deviance function or the REML criterion)
+  attr_accessor :l
+  # upper triangular Cholesky factor of the relative covariance matrix of the random effects.
+  # (this attribute will be updated during the evaluation of
+  # the deviance function or the REML criterion)
+  attr_accessor :lambdat
+  # conditional mean of response
+  # (this attribute will be updated during the evaluation of
+  # the deviance function or the REML criterion)
+  attr_accessor :mu
+  # conditional mean of spherical random effects
+  # (this attribute will be updated during the evaluation of
+  # the deviance function or the REML criterion)
+  attr_accessor :u
+  # penalized weighted residual sum of squares
+  # (this attribute will be updated during the evaluation of
+  # the deviance function or the REML criterion)
+  attr_accessor :pwrss
+  # cross-product of fixed effect Cholesky factor
+  # (this attribute will be updated during the evaluation of
+  # the deviance function or the REML criterion)
+  attr_accessor :rxtrx
 
 end

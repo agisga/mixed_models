@@ -13,7 +13,7 @@ module MixedModels
   # === Arguments
   #
   # * +d+    - an object of class LMMData supplying the data
-  #            required for the deviance/REML function evaluations
+  #   required for the deviance/REML function evaluations
   # * +reml+ - indicator whether to calculate REML criterion 
   #
   # === References

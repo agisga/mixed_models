@@ -10,8 +10,28 @@
 #
 class LMM
 
-  attr_reader :reml, :formula, :dev_fun, :optimization_result, :model_data,
-              :sigma2, :sigma_mat, :fix_ef, :ran_ef, :fix_ef_names, :ran_ef_names
+  # indicator whether the REML criterion or the deviance function was used
+  attr_reader :reml 
+  # formula used to fit the model
+  attr_reader :formula 
+  # deviance function or REML criterion as a Proc
+  attr_reader :dev_fun 
+  # object returned by the optimization routine
+  attr_reader :optimization_result
+  # object of class LMMData containing all model matrices etc
+  attr_reader :model_data
+  # covariance scaling factor (residual variance if no weights were used)
+  attr_reader :sigma2
+  # covariance matrix of the random effects vector
+  attr_reader :sigma_mat
+  # fixed effect coefficients estimates
+  attr_reader :fix_ef
+  # random effects coefficients estimates
+  attr_reader :ran_ef
+  # names of the fixed effects coefficients
+  attr_reader :fix_ef_names
+  # names of the random effects coefficients
+  attr_reader :ran_ef_names
 
   # Fit and store a linear mixed effects model according to the input from the user.
   # Parameter estimates are obtained by the method described in Bates et. al. (2014).
@@ -21,36 +41,29 @@ class LMM
   # * +x+              - fixed effects model matrix as a dense NMatrix
   # * +y+              - response vector as a nx1 dense NMatrix
   # * +zt+             - transpose of the random effects model matrix as a dense NMatrix
-  # * +x_col_names     - (Optional) column names for the matrix +x+, i.e. the names of the fixed
-  #                      effects terms
-  # * +z_col_names     - (Optional) column names for the matrix z, i.e. row names for the matrix
-  #                      +zt+, i.e. the names of the random effects terms
+  # * +x_col_names+    - (Optional) column names for the matrix +x+, i.e. the names of the fixed
+  #   effects terms
+  # * +z_col_names+    - (Optional) column names for the matrix z, i.e. row names for the matrix
+  #   +zt+, i.e. the names of the random effects terms
   # * +weights+        - (Optional) Array of prior weights
-  # * +offset+         - an optional vector of offset terms which are known 
-  #                      a priori; a nx1 NMatrix
+  # * +offset+         - an optional vector of offset terms which are known a priori; a nx1 NMatrix
   # * +reml+           - if true than the profiled REML criterion will be used as the objective
-  #                      function for the minimization; if false then the profiled deviance 
-  #                      will be used; defaults to true
-  # * +start_point+    - an Array specifying the initial parameter estimates for the 
-  #                      minimization
-  # * +lower_bound+    - an optional Array of lower bounds for each coordinate of the optimal 
-  #                      solution 
-  # * +upper_bound+    - an optional Array of upper bounds for each coordinate of the optimal 
-  #                      solution 
+  #   function for the minimization; if false then the profiled deviance will be used; defaults to true
+  # * +start_point+    - an Array specifying the initial parameter estimates for the minimization
+  # * +lower_bound+    - an optional Array of lower bounds for each coordinate of the optimal solution 
+  # * +upper_bound+    - an optional Array of upper bounds for each coordinate of the optimal solution 
   # * +epsilon+        - a small number specifying the thresholds for the convergence check 
-  #                      of the optimization algorithm; see the respective documentation for 
-  #                      more detail
+  #   of the optimization algorithm; see the respective documentation for more detail
   # * +max_iterations+ - the maximum number of iterations for the optimization algorithm
   # * +from_daru_args+ - (! Never used in a direct call of #initialize) a Hash, storinig some 
-  #                      arguments supplied to #from_daru (except the data set and the arguments 
-  #                      that #from_daru shares with #initialize), if #initilize was originally 
-  #                      called from within the #from_daru method
+  #   arguments supplied to #from_daru (except the data set and the arguments that #from_daru shares 
+  #   with #initialize), if #initilize was originally called from within the #from_daru method
   # * +formula+        - (! Never used in a direct call of #initialize) a String containing the 
-  #                      formula used to fit the model, if the model was fit by #from_formula
+  #   formula used to fit the model, if the model was fit by #from_formula
   # * +thfun+          - a block or +Proc+ object that takes in an Array +theta+ and produces
-  #                      the non-zero elements of the dense NMatrix +lambdat+, which is the upper 
-  #                      triangular Cholesky factor of the relative covariance matrix of the random 
-  #                      effects. The structure of +lambdat+ cannot change, only the numerical values.
+  #   the non-zero elements of the dense NMatrix +lambdat+, which is the upper triangular Cholesky 
+  #   factor of the relative covariance matrix of the random effects. The structure of +lambdat+ cannot 
+  #   change, only the numerical values.
   #
   # === References
   # 
@@ -139,27 +152,27 @@ class LMM
   # === Arguments
   #
   # * +formula+        - a String containing a two-sided linear formula describing both, the 
-  #                      fixed effects and random effects of the model, with the response on 
-  #                      the left of a ~ operator and the terms, separated by + operators, 
-  #                      on the right hand side. Random effects specifications are in 
-  #                      parentheses () and contain a vertical bar |. Expressions for design 
-  #                      matrices are on the left of the vertical bar |, and grouping factors 
-  #                      are on the right. 
+  #   fixed effects and random effects of the model, with the response on 
+  #   the left of a ~ operator and the terms, separated by + operators, 
+  #   on the right hand side. Random effects specifications are in 
+  #   parentheses () and contain a vertical bar |. Expressions for design 
+  #   matrices are on the left of the vertical bar |, and grouping factors 
+  #   are on the right. 
   # * +data+           - a Daru::DataFrame object, containing the response, fixed and random 
-  #                      effects, as well as the grouping variables
+  #   effects, as well as the grouping variables
   # * +weights+        - optional Array of prior weights
   # * +offset+         - an optional vector of offset terms which are known 
-  #                      a priori; a nx1 NMatrix
+  #   a priori; a nx1 NMatrix
   # * +reml+           - if true than the profiled REML criterion will be used as the objective
-  #                      function for the minimization; if false then the profiled deviance 
-  #                      will be used; defaults to true
+  #   function for the minimization; if false then the profiled deviance 
+  #   will be used; defaults to true
   # * +start_point+    - an optional Array specifying the initial parameter estimates for the 
-  #                      minimization
+  #   minimization
   # * +epsilon+        - an optional  small number specifying the thresholds for the 
-  #                      convergence check of the optimization algorithm; see the respective 
-  #                      documentation for more detail
+  #   convergence check of the optimization algorithm; see the respective 
+  #   documentation for more detail
   # * +max_iterations+ - optional, the maximum number of iterations for the optimization 
-  #                      algorithm
+  #   algorithm
   #
   # === Usage
   #
@@ -262,36 +275,36 @@ class LMM
   #
   # * +response+       - name of the response variable in +data+
   # * +fixed_effects+  - names of the fixed effects in +data+, given as an Array. An 
-  #                      interaction effect can be specified as Array of length two.
-  #                      An intercept term can be denoted as +:intercept+; and 
-  #                      +:no_intercept+ denotes the exclusion of an intercept term, even 
-  #                      if +:intercept+ is given.
+  #   interaction effect can be specified as Array of length two.
+  #   An intercept term can be denoted as +:intercept+; and 
+  #   +:no_intercept+ denotes the exclusion of an intercept term, even 
+  #   if +:intercept+ is given.
   # * +random_effects+ - names of the random effects in +data+, given as an Array of Arrays;
-  #                      where the variables in each (inner) Array share a common grouping 
-  #                      structure, and the corresponding random effects are modeled as 
-  #                      correlated. An interaction effect can be specified as Array of 
-  #                      length two. An intercept term can be denoted as +:intercept+; and 
-  #                      +:no_intercept+ denotes the exclusion of an intercept term, even 
-  #                      if +:intercept+ is given.
+  #   where the variables in each (inner) Array share a common grouping 
+  #   structure, and the corresponding random effects are modeled as 
+  #   correlated. An interaction effect can be specified as Array of 
+  #   length two. An intercept term can be denoted as +:intercept+; and 
+  #   +:no_intercept+ denotes the exclusion of an intercept term, even 
+  #   if +:intercept+ is given.
   # * +grouping+       - an Array of the names of the variables in +data+, which determine the
-  #                      grouping structures for +random_effects+
+  #   grouping structures for +random_effects+
   # * +data+           - a Daru::DataFrame object, containing the response, fixed and random 
-  #                      effects, as well as the grouping variables
+  #   effects, as well as the grouping variables
   # * +weights+        - optional Array of prior weights
   # * +offset+         - an optional vector of offset terms which are known 
-  #                      a priori; a nx1 NMatrix
+  #   a priori; a nx1 NMatrix
   # * +reml+           - if true than the profiled REML criterion will be used as the objective
-  #                      function for the minimization; if false then the profiled deviance 
-  #                      will be used; defaults to true
+  #   function for the minimization; if false then the profiled deviance 
+  #   will be used; defaults to true
   # * +start_point+    - an optional Array specifying the initial parameter estimates for the 
-  #                      minimization
+  #   minimization
   # * +epsilon+        - an optional  small number specifying the thresholds for the 
-  #                      convergence check of the optimization algorithm; see the respective 
-  #                      documentation for more detail
+  #   convergence check of the optimization algorithm; see the respective 
+  #   documentation for more detail
   # * +max_iterations+ - optional, the maximum number of iterations for the optimization 
-  #                      algorithm
+  #   algorithm
   # * +formula+        - (! Never used in a direct call of #from_daru) a String containing the 
-  #                      formula used to fit the model, if the model was fit by #from_formula
+  #   formula used to fit the model, if the model was fit by #from_formula
   #
   # === Usage
   #
@@ -397,8 +410,8 @@ class LMM
   # === Arguments
   #
   # * +with_ran_ef+ - specifies if random effects coefficients should be used; i.e. whether
-  #                   the returned value is X*beta or X*beta+Z*b, where beta are the fixed
-  #                   and b the random effects coefficients; default is true 
+  #   returned value is X*beta or X*beta+Z*b, where beta are the fixed
+  #   b the random effects coefficients; default is true 
   #                   
   def fitted(with_ran_ef: true)
     if with_ran_ef then
@@ -457,8 +470,8 @@ class LMM
   # === Arguments
   #
   # * +method+ - determines the method used to compute the p-values;
-  #              dafault and currently the only possibility is +:wald+,
-  #              which denotes the Wald z test
+  #   default and currently the only possibility is +:wald+,
+  #   which denotes the Wald z test
   #
   def fix_ef_p(method: :wald)
     p = Hash.new
@@ -481,8 +494,8 @@ class LMM
   #
   # * +level+  - confidence level, a number between 0 and 1
   # * +method+ - determines the method used to compute the confidence intervals;
-  #              dafault and currently the only possibility is +:wald+, which 
-  #              approximates the confidence intervals based on the Wald z test statistic 
+  #   default and currently the only possibility is +:wald+, which 
+  #   approximates the confidence intervals based on the Wald z test statistic 
   #
   def fix_ef_conf_int(level: 0.95, method: :wald)
     alpha = 1.0 - level
@@ -536,7 +549,7 @@ class LMM
   end
 
   # The square root of +@sigma2+. It is the residual standard deviation if all weights are 
-  #  equal to one
+  # equal to one
   #
   def sigma
     Math::sqrt(@sigma2)
@@ -552,12 +565,12 @@ class LMM
   # === Arguments
   #
   # * +newdata+     - a Daru::DataFrame object containing the data for which the predictions
-  #                   will be evaluated
+  #   will be evaluated
   # * +x+           - fixed effects model matrix, a NMatrix object
   # * +z+           - random effects model matrix, a NMatrix object
   # * +with_ran_ef+ - indicator whether the random effects should be considered in the
-  #                   predictions; i.e. whether the predictions are computed as x*beta
-  #                   or as x*beta+z*b; default is true
+  #   predictions; i.e. whether the predictions are computed as x*beta
+  #   or as x*beta+z*b; default is true
   #
   # === Usage
   #
@@ -661,12 +674,12 @@ class LMM
   # === Arguments
   #
   # * +newdata+ - a Daru::DataFrame object containing the data for which the predictions
-  #               will be evaluated
+  #   will be evaluated
   # * +x+       - fixed effects model matrix, a NMatrix object
   # * +z+       - random effects model matrix, a NMatrix object
   # * +level+   - confidence level, a number between 0 and 1
   # * +type+    - +:confidence+ or +:prediction+ for confidence and prediction intervals
-  #               respectively; see above for explanation of their difference
+  #   respectively; see above for explanation of their difference
   #
   def predict_with_intervals(newdata: nil, x: nil, z: nil, level: 0.95, type: :confidence)
     raise(ArgumentError, "EITHER pass newdata OR x OR nothing") if newdata && x

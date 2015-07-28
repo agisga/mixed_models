@@ -63,14 +63,13 @@ module MixedModels
 
     # === Arguments
     #
-    #   * +start_point+    - an Array specifying the initial point for the minimization
-    #   * +lower_bound+    - an Array of lower bounds for each coordinate of the optimal solution 
-    #   * +upper_bound+    - an Array of upper bounds for each coordinate of the optimal solution 
-    #   * +epsilon+        - a small number specifying the thresholds for the convergence check: 
-    #                        +absolute_threshold+ = +epsilon+ and 
-    #                        +relative_threshold+ = 100 * +epsilon+
-    #   * +max_iterations+ - the maximum number of iterations
-    #   * +f+              - the objective function as a Proc object
+    # * +start_point+    - an Array specifying the initial point for the minimization
+    # * +lower_bound+    - an Array of lower bounds for each coordinate of the optimal solution 
+    # * +upper_bound+    - an Array of upper bounds for each coordinate of the optimal solution 
+    # * +epsilon+        - a small number specifying the thresholds for the convergence check: 
+    #   +absolute_threshold+ = +epsilon+ and +relative_threshold+ = 100 * +epsilon+
+    # * +max_iterations+ - the maximum number of iterations
+    # * +f+              - the objective function as a Proc object
     #
     def initialize(start_point:, lower_bound: nil, upper_bound: nil, 
                    epsilon: 1e-6, max_iterations: 1e6, &f)
@@ -140,7 +139,7 @@ module MixedModels
     # (otherwise the originally supplied point).
     #
     # === Arguments
-    #   * +point+ - an array with the coordinates of the point
+    # * +point+ - an array with the coordinates of the point
     #
     def move_into_bounds(point)
       n = point.length
@@ -155,7 +154,7 @@ module MixedModels
     # Build an initial simplex
     #
     # === Arguments
-    #   * +start_point+ - starting point of the minimization search
+    # * +start_point+ - starting point of the minimization search
     #
     def build_simplex(start_point)
       n = start_point.length
@@ -232,7 +231,7 @@ module MixedModels
     # Replace the worst point of the simplex by a new point
     #
     # === Arguments 
-    #   * +point_value_pair+ - point to insert
+    # * +point_value_pair+ - point to insert
     #
     def replace_worst_point(point_value_pair)
       n = @simplex.length - 1
@@ -355,14 +354,13 @@ module MixedModels
     #
     # === Arguments
     #
-    #   * +start_point+   - an Array specifying the initial point for the minimization
-    #   * +lower_bound+   - an Array of lower bounds for each coordinate of the optimal solution 
-    #   * +upper_bound+   - an Array of upper bounds for each coordinate of the optimal solution 
-    #   * +epsilon+       - a small number specifying the thresholds for the convergence check: 
-    #                       +absolute_threshold+ = +epsilon+ and 
-    #                       +relative_threshold+ = 100 * +epsilon+
-    #   * +max_iterations+ - the maximum number of iterations
-    #   * +f+             - the objective function as a Proc object
+    # * +start_point+   - an Array specifying the initial point for the minimization
+    # * +lower_bound+   - an Array of lower bounds for each coordinate of the optimal solution 
+    # * +upper_bound+   - an Array of upper bounds for each coordinate of the optimal solution 
+    # * +epsilon+       - a small number specifying the thresholds for the convergence check: 
+    #   +absolute_threshold+ = +epsilon+ and +relative_threshold+ = 100 * +epsilon+
+    # * +max_iterations+ - the maximum number of iterations
+    # * +f+             - the objective function as a Proc object
     #   
     # === Usage
     #   minimizer=MixedModels::NelderMead.minimize(start_point: [0,0]) {|x| (x[0] - 1) ** 2 + (x[1] - 5) ** 2}

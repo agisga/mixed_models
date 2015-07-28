@@ -8,18 +8,18 @@ module MixedModels
   #
   # === Usage
   #
-  # intercept = MixedModels::lmm_variable(:intercept)
-  # x         = MixedModels::lmm_variable(:x)
-  # y         = MixedModels::lmm_variable(:y)
-  # u         = MixedModels::lmm_variable(:u)
-  # w         = MixedModels::lmm_variable(:w)
-  # z         = intercept + x + y + x*y + 
-  #             (intercept + x + y + x*y| u) + 
-  #             (intercept | w)
-  # input     = z.to_input_for_lmm_from_daru
-  # input[:fixed_effects] # => [:intercept, :x, :y, [:x, :y]]
-  # input[:random_effects] # => [[:intercept, :x, :y, [:x, :y]], [:intercept]]
-  # input[:grouping] # => [:u, :w]
+  #   intercept = MixedModels::lmm_variable(:intercept)
+  #   x         = MixedModels::lmm_variable(:x)
+  #   y         = MixedModels::lmm_variable(:y)
+  #   u         = MixedModels::lmm_variable(:u)
+  #   w         = MixedModels::lmm_variable(:w)
+  #   z         = intercept + x + y + x*y + 
+  #               (intercept + x + y + x*y| u) + 
+  #               (intercept | w)
+  #   input     = z.to_input_for_lmm_from_daru
+  #   input[:fixed_effects] # => [:intercept, :x, :y, [:x, :y]]
+  #   input[:random_effects] # => [[:intercept, :x, :y, [:x, :y]], [:intercept]]
+  #   input[:grouping] # => [:u, :w]
   #
   class LMMFormula
     def initialize(content)

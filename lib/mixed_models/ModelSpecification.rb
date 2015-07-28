@@ -13,13 +13,13 @@ module MixedModels
   # === Arguments
   #
   # * +x+     - Array of NMatrix objects. Each matrix +x[i]+ contains the covariates
-  #             for a group of random effects with a common grouping structure.
-  #             Typically, a given +x[i]+ contains correlated random effects, and the
-  #             random effects from different matrices +x[i]+ are modeled as uncorrelated.  
+  #   for a group of random effects with a common grouping structure.
+  #   Typically, a given +x[i]+ contains correlated random effects, and the
+  #   random effects from different matrices +x[i]+ are modeled as uncorrelated.  
   # * +grp+   - Array of Arrays. Each +grp[i]+ has length equal to the number of rows in +x[i]+,
-  #             and specifies which observations in +x[i]+ correspond to which group.
+  #   and specifies which observations in +x[i]+ correspond to which group.
   # * +names+ - (Optional) Array of Arrays, where the i'th Array contains the column names
-  #             of the +x[i]+ matrix, i.e. the names of the corresponding random effects terms.
+  #   of the +x[i]+ matrix, i.e. the names of the corresponding random effects terms.
   #
   # === Returns
   #
@@ -34,19 +34,19 @@ module MixedModels
   #
   # === Usage
   #
-  # grp = Array[["grp1", "grp1", 2, 2, "grp3", "grp3"]]
-  # x1  = NMatrix.new([6,2], [1,-1,1,1,1,-1,1,1,1,-1,1,1], dtype: :float64)
-  # x   = Array[x1]
-  # z   = MixedModels::mk_ran_ef_model_matrix(x, grp)[:z]
-  #         # => 
-  #           [
-  #             [1.0, -1.0, 0.0,  0.0, 0.0,  0.0]
-  #             [1.0,  1.0, 0.0,  0.0, 0.0,  0.0]
-  #             [0.0,  0.0, 1.0, -1.0, 0.0,  0.0]
-  #             [0.0,  0.0, 1.0,  1.0, 0.0,  0.0]
-  #             [0.0,  0.0, 0.0,  0.0, 1.0, -1.0]
-  #             [0.0,  0.0, 0.0,  0.0, 1.0,  1.0]
-  #           ]
+  #   grp = Array[["grp1", "grp1", 2, 2, "grp3", "grp3"]]
+  #   x1  = NMatrix.new([6,2], [1,-1,1,1,1,-1,1,1,1,-1,1,1], dtype: :float64)
+  #   x   = Array[x1]
+  #   z   = MixedModels::mk_ran_ef_model_matrix(x, grp)[:z]
+  #           # => 
+  #             [
+  #               [1.0, -1.0, 0.0,  0.0, 0.0,  0.0]
+  #               [1.0,  1.0, 0.0,  0.0, 0.0,  0.0]
+  #               [0.0,  0.0, 1.0, -1.0, 0.0,  0.0]
+  #               [0.0,  0.0, 1.0,  1.0, 0.0,  0.0]
+  #               [0.0,  0.0, 0.0,  0.0, 1.0, -1.0]
+  #               [0.0,  0.0, 0.0,  0.0, 1.0,  1.0]
+  #             ]
   #
   def MixedModels.mk_ran_ef_model_matrix(x, grp, names=nil)
     num_x = x.length  # number of raw random effects matrices
@@ -131,9 +131,9 @@ module MixedModels
   # === Arguments
   #
   # * +num_ran_ef+     - Array, where +num_ran_ef[i]+ is the number of random effects terms 
-  #                      associated with the i'th grouping structure. 
+  #   associated with the i'th grouping structure. 
   # * +num_grp_levels+ - Array, where +num_grp_levels[i]+ is the number of levels of the i'th 
-  #                      grouping structure.
+  #   grouping structure.
   #
   # === Usage
   #
@@ -187,9 +187,9 @@ module MixedModels
   # * +fixed_effects+  - Array of names of the fixed effects, see LMM#from_daru for details
   # * +random_effects+ - Array of Arrays of names of random effects, see LMM#from_daru for details
   # * +grouping+       - Array of names which determine the grouping structure underlying the
-  #                      random effects, see LMM#from_daru for details 
+  #   random effects, see LMM#from_daru for details 
   # * +data+           - Daru::DataFrame object, containing the response, fixed and random 
-  #                      effects, as well as the grouping variables
+  #   effects, as well as the grouping variables
   #
   def MixedModels.adjust_lmm_from_daru_inputs(fixed_effects:, random_effects:, grouping:, data:)
     n = data.size

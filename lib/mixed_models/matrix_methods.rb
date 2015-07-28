@@ -4,13 +4,13 @@ class NMatrix
   #
   # === Arguments
   #
-  #   * +v+ - A NMatrix of shape [1,n] (i.e. a row vector)
+  # * +v+ - A NMatrix of shape [1,n] (i.e. a row vector)
   #
   # === Usage 
   #
-  #  a = NMatrix.new([1,3], [0,1,0])
-  #  b = NMatrix.new([1,2], [3,2])
-  #  a.kron_prod_1D b #  =>  [ [0, 0, 3, 2, 0, 0] ]
+  #    a = NMatrix.new([1,3], [0,1,0])
+  #    b = NMatrix.new([1,2], [3,2])
+  #    a.kron_prod_1D b #  =>  [ [0, 0, 3, 2, 0, 0] ]
   #  
   def kron_prod_1D(v)
     unless self.dimensions==2 && v.dimensions==2 && self.shape[0]==1 && v.shape[0]==1
@@ -32,11 +32,11 @@ class NMatrix
   #
   # === Usage
   #
-  # a = NMatrix.new([3,2], [1,2,1,2,1,2], dtype: dtype, stype: stype)
-  # b = NMatrix.new([3,2], (1..6).to_a, dtype: dtype, stype: stype)
-  # m = a.khatri_rao_rows b # =>  [ [1.0, 2.0,  2.0,  4.0]
-  #                                 [3.0, 4.0,  6.0,  8.0]
-  #                                 [5.0, 6.0, 10.0, 12.0] ]
+  #   a = NMatrix.new([3,2], [1,2,1,2,1,2], dtype: dtype, stype: stype)
+  #   b = NMatrix.new([3,2], (1..6).to_a, dtype: dtype, stype: stype)
+  #   m = a.khatri_rao_rows b # =>  [ [1.0, 2.0,  2.0,  4.0]
+  #                                   [3.0, 4.0,  6.0,  8.0]
+  #                                   [5.0, 6.0, 10.0, 12.0] ]
   #
   def khatri_rao_rows(mat)
     raise NotImplementedError, "Implemented for 2D matrices only" unless self.dimensions==2 and mat.dimensions==2
@@ -60,9 +60,9 @@ class NMatrix
   #
   # === Usage
   #
-  # a = NMatrix.random([10,10], dtype: :float64)
-  # b = NMatrix.random([10,5], dtype: :float64)
-  # x = a.solve(b)
+  #   a = NMatrix.random([10,10], dtype: :float64)
+  #   b = NMatrix.random([10,5], dtype: :float64)
+  #   x = a.solve(b)
   #
   def matrix_valued_solve(rhs_mat)
     # This is a workaround. See NMatrix issue:
@@ -80,15 +80,15 @@ class NMatrix
   # === Arguments
   #
   # * +uplo+ - flag indicating whether the matrix is lower or upper triangular;
-  #            possible values are :lower and :upper
+  #   possible values are :lower and :upper
   # * +rhs+  - the right hand side, a nx1 NMatrix object
   #
   # === Usage
   #
-  # a = NMatrix.new(3, [4, 0, 0, -2, 2, 0, -4, -2, -0.5], dtype: :float64)
-  # b = NMatrix.new([3,1], [-1, 17, -9], dtype: :float64)
-  # x = a.triangular_solve(:lower, b)
-  # a.dot x # => [ [-1.0]   [17.0]   [-9.0] ]
+  #   a = NMatrix.new(3, [4, 0, 0, -2, 2, 0, -4, -2, -0.5], dtype: :float64)
+  #   b = NMatrix.new([3,1], [-1, 17, -9], dtype: :float64)
+  #   x = a.triangular_solve(:lower, b)
+  #   a.dot x # => [ [-1.0]   [17.0]   [-9.0] ]
   #
   def triangular_solve(uplo, rhs)
     raise(ArgumentError, "uplo should be :lower or :upper") unless uplo == :lower or uplo == :upper
@@ -106,11 +106,11 @@ class NMatrix
     #
     # ==== Arguments
     #
-    #  * +params+ - An array that collects all arguments passed to the method. The method
-    #                can receive any number of arguments. The last entry of +params+ is a 
-    #                hash of options from NMatrix#initialize. All other entries of +params+ are 
-    #                the blocks of the desired block-diagonal matrix, which are supplied
-    #                as square 2D NMatrix objects.
+    # * +params+ - An array that collects all arguments passed to the method. The method
+    #   can receive any number of arguments. The last entry of +params+ is a 
+    #   hash of options from NMatrix#initialize. All other entries of +params+ are 
+    #   the blocks of the desired block-diagonal matrix, which are supplied
+    #   as square 2D NMatrix objects.
     #
     # ==== Usage
     #
@@ -154,6 +154,5 @@ class NMatrix
 
       return bdiag
     end
-
   end
 end

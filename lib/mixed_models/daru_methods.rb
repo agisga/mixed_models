@@ -24,19 +24,16 @@ module Daru
     #
     # === Arguments
     #
-    # * +for_model_without_intercept+ - if false (which is the default), then 
-    #                                   the indicator vector for the first level of every 
-    #                                   categorical variable will be excluded. Otherwise,
-    #                                   all levels for the first categorical variable are
-    #                                   considered, but the first level for all others are
-    #                                   excuded.
+    # * +for_model_without_intercept+ - if false (which is the default), then the indicator vector 
+    #   for the first level of every categorical variable will be excluded. Otherwise, all levels for 
+    #   the first categorical variable are considered, but the first level for all others are excuded.
     #
     # === Usage
     #
-    # > df = Daru::DataFrame.new([(1..7).to_a, ['a','b','b','a','c','d','c']], order: ['int','char']) 
-    # > df.create_indicator_vectors_for_categorical_vectors!
+    #   df = Daru::DataFrame.new([(1..7).to_a, ['a','b','b','a','c','d','c']], order: ['int','char']) 
+    #   df.create_indicator_vectors_for_categorical_vectors!
     #   # => {:char=>[:char_lvl_a, :char_lvl_b, :char_lvl_c, :char_lvl_d]}
-    # > df
+    #   df
     #   # => #<Daru::DataFrame:70180517472080 @name = 75ddbda4-d4df-41b2-a41e-2f600764061b @size = 7>
     #              int       char char_lvl_a char_lvl_b char_lvl_c char_lvl_d 
     #     0          1          a        1.0        0.0        0.0        0.0 
@@ -99,9 +96,8 @@ module Daru
     # === Arguments
     #
     # * +name+ - used for the naming of the columns of the returned data frame
-    # * +for_model_without_intercept+ - if false (which is the default), then 
-    #                                   the first column of the produced data 
-    #                                   frame will be excluded
+    # * +for_model_without_intercept+ - if false (which is the default), then the first 
+    #   column of the produced data frame will be excluded
     #
     # === Usage
     #
