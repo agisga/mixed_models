@@ -234,8 +234,8 @@ module MixedModels
     # Deal with interaction effects and nested grouping factors
     ################################################################
 
-    # FIXME: this is little tested and much incomplete
-
+    # this Array will collect the names of all interaction effects, which have a correponding
+    # vector in the data frame 
     interaction_names = Array.new
     
     # Proc that adds a new vector to the data frame for an interaction of two numeric vectors,
@@ -271,19 +271,64 @@ module MixedModels
       num_x_cat_interactions
     end
 
+    # Proc that adds new vectors to the data frame for an interaction of two categorical 
+    # vectors, and returns the names of the newly created data frame columns
+    cat_x_cat = Proc.new do |ef0, ef1, has_noninteraction_ef0, has_noninteraction_ef1, has_intercept| 
+      # if noninteraction effects are present, then some levels of the interaction variable need to 
+      # be removed, in order to preserve full column rank of the model matrix
+      case [has_noninteraction_ef0, has_noninteraction_ef1]
+      when [true, true]
+        names_ef0 = new_names[ef0][1..-1]
+        names_ef1 = new_names[ef1][1..-1]
+      when [true, false]
+        names_ef0 = new_names[ef0]
+        names_ef1 = new_names[ef1][1..-1]
+      when [false, true]
+        names_ef0 = new_names[ef0][1..-1]
+        names_ef1 = new_names[ef1]
+      else
+        names_ef0 = new_names[ef0]
+        names_ef1 = new_names[ef1]
+      end
+
+      cat_x_cat_interactions = Array.new
+      names_ef0.each do |name0|
+        names_ef1.each do |name1|
+          inter_name = "#{name0}_interaction_with_#{name1}".to_sym
+          unless interaction_names.include? inter_name
+            data[inter_name] = data[name0] * data[name1] 
+            interaction_names.push(inter_name)
+          end
+          cat_x_cat_interactions.push(inter_name)
+        end
+      end
+      # remove the last level of the interaction variable if an intercept is present;
+      # if noninteraction effects are present, then this is already accounted for
+      if !has_noninteraction_ef0 & !has_noninteraction_ef1 & has_intercept then
+        cat_x_cat_interactions.pop
+      end
+
+      cat_x_cat_interactions
+    end
+
     # Deal with interaction effects among the fixed and random effects terms
     [fixed_effects, *random_effects].each do |effects_array|
       effects_array.each_with_index do |ef, ind|
         if ef.is_a? Array then
           raise(NotImplementedError, "interaction effects can only be bi-variate") unless ef.length == 2
+
+          str0, str1 = "^#{ef[0]}_lvl_", "^#{ef[1]}_lvl_"
+          has_noninteraction_ef0 = (effects_array.include?(ef[0]) || effects_array.any? { |e| e.to_s =~ /#{str0}/ })
+          has_noninteraction_ef1 = (effects_array.include?(ef[1]) || effects_array.any? { |e| e.to_s =~ /#{str1}/ })
+          has_intercept = effects_array.include?(:intercept)
+
           case [categorical_names.include?(ef[0]), categorical_names.include?(ef[1])]
           when [true, true]
-            raise(NotImplementedError, "interaction effects between two categorical variables not implemented") 
+            effects_array[ind..ind] = cat_x_cat.call(ef[0], ef[1], has_noninteraction_ef0, 
+                                                     has_noninteraction_ef1, has_intercept)
           when [true, false]
-            has_noninteraction_ef1 = effects_array.include?(ef[1])
             effects_array[ind..ind] = num_x_cat.call(ef[1], ef[0], has_noninteraction_ef1)
           when [false, true]
-            has_noninteraction_ef0 = effects_array.include?(ef[0])
             effects_array[ind..ind] = num_x_cat.call(ef[0], ef[1], has_noninteraction_ef0)
           else
             effects_array[ind] = num_x_num.call(ef[0], ef[1])
