@@ -34,33 +34,87 @@ describe NMatrix do
 
   [:float32, :float64].each do |dtype|
     context "#matrix_valued_solve #{dtype} dense" do
-      it "solves a matrix-valued linear system A * X = B" do
-        a = NMatrix.random([10,10], dtype: dtype)
-        m = rand(1..10)
-        b = NMatrix.random([10,m], dtype: dtype)
-        x = a.matrix_valued_solve(b)
-        r = a.dot(x) - b
-        expect(r.max(1).max).to be_within(1e-6).of(0.0)
+      let(:a) { NMatrix.new([3,3], [1, 2, 3, 0, 0.5, 4, 3, 3, 9], dtype: dtype) }
+
+      context "with a vector-valued right hand side" do
+        it "solves a matrix-valued linear system A * X = B" do
+          b = NMatrix.new([3,1], [1, 2, 3], dtype: dtype)
+          x = a.matrix_valued_solve(b)
+          r = (a.dot(x) - b).to_flat_a
+          expect(r.max).to be_within(1e-6).of(0.0)
+        end
+      end
+
+      context "with a narrow-matrix-valued right hand side" do
+        it "solves a matrix-valued linear system A * X = B" do
+          b = NMatrix.new([3,2], [1, 4, 2, 5, 3, 6], dtype: dtype)
+          x = a.matrix_valued_solve(b)
+          r = (a.dot(x) - b).to_flat_a
+          expect(r.max).to be_within(1e-6).of(0.0)
+        end
+      end
+
+      context "with a wide-matrix-valued right hand side" do
+        it "solves a matrix-valued linear system A * X = B" do
+          b = NMatrix.new([3,6], (1..18).to_a, dtype: dtype)
+          x = a.matrix_valued_solve(b)
+          r = (a.dot(x) - b).to_flat_a
+          expect(r.max).to be_within(1e-5).of(0.0)
+        end
       end
     end
   end
 
   [:float32, :float64].each do |dtype|
     context "#triangular_solve #{dtype} dense" do
-      it "solves a linear system A * x = b with a lower triangular A" do
-        a = NMatrix.random([10,10], dtype: dtype).tril
-        b = NMatrix.random([10,1], dtype: dtype)
-        x = a.triangular_solve(:lower, b)
-        r = a.dot(x) - b
-        expect(r.max).to be_within(1e-6).of(0.0)
+      context "when lower triangular" do
+        let(:a) { NMatrix.new([3,3], [1, 0, 0, 2, 0.5, 0, 3, 3, 9], dtype: dtype) }
+
+        it "solves a linear system A * x = b with vector b" do
+          b = NMatrix.new([3,1], [1,2,3], dtype: dtype)
+          x = a.triangular_solve(:lower, b)
+          r = a.dot(x) - b
+          expect(r.max).to be_within(1e-6).of(0.0)
+        end
+
+        it "solves a linear system A * X = B with narrow B" do
+          b = NMatrix.new([3,2], [1,2,3,4,5,6], dtype: dtype)
+          x = a.triangular_solve(:lower, b)
+          r = (a.dot(x) - b).to_flat_a
+          expect(r.max).to be_within(1e-6).of(0.0)
+        end
+
+        it "solves a linear system A * X = B with wide B" do
+          b = NMatrix.new([3,5], (1..15).to_a, dtype: dtype)
+          x = a.triangular_solve(:lower, b)
+          r = (a.dot(x) - b).to_flat_a
+          expect(r.max).to be_within(1e-6).of(0.0)
+        end
       end
 
-      it "solves a linear system A * x = b with an upper triangular A" do
-        a = NMatrix.random([10,10], dtype: dtype).triu
-        b = NMatrix.random([10,1], dtype: dtype)
-        x = a.triangular_solve(:upper, b)
-        r = a.dot(x) - b
-        expect(r.max).to be_within(1e-6).of(0.0)
+      context "when upper triangular" do
+        let(:a) { NMatrix.new([3,3], [3, 2, 1, 0, 2, 0.5, 0, 0, 9], dtype: dtype) }
+
+        it "solves a linear system A * x = b with vector b" do
+          b = NMatrix.new([3,1], [1,2,3], dtype: dtype)
+          x = a.triangular_solve(:upper, b)
+          r = a.dot(x) - b
+          expect(r.max).to be_within(1e-6).of(0.0)
+        end
+
+        it "solves a linear system A * X = B with narrow B" do
+          b = NMatrix.new([3,2], [1,2,3,4,5,6], dtype: dtype)
+          x = a.triangular_solve(:upper, b)
+          r = (a.dot(x) - b).to_flat_a
+          expect(r.max).to be_within(1e-6).of(0.0)
+        end
+
+        it "solves a linear system A * X = B with a wide B" do
+          b = NMatrix.new([3,5], (1..15).to_a, dtype: dtype)
+          x = a.triangular_solve(:upper, b)
+          r = (a.dot(x) - b).to_flat_a
+          expect(r.max).to be_within(1e-6).of(0.0)
+        end
       end
     end
   end

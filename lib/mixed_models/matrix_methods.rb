@@ -74,14 +74,14 @@ class NMatrix
     return rhs_mat_t.transpose
   end
 
-  # Solve a linear system A * x = b, where A is a lower triangular matrix, 
-  # x and b are vectors. 
+  # Solve a linear system A * X = B, where A is a lower triangular matrix, 
+  # X and B are vectors or matrices. 
   #
   # === Arguments
   #
   # * +uplo+ - flag indicating whether the matrix is lower or upper triangular;
   #   possible values are :lower and :upper
-  # * +rhs+  - the right hand side, a nx1 NMatrix object
+  # * +rhs+  - the right hand side, an NMatrix object
   #
   # === Usage
   #
@@ -93,10 +93,11 @@ class NMatrix
   def triangular_solve(uplo, rhs)
     raise(ArgumentError, "uplo should be :lower or :upper") unless uplo == :lower or uplo == :upper
     b = rhs.clone
-    a = self.clone
-    NMatrix::BLAS::cblas_trsm(:row, :right, uplo, :transpose, :nounit, 
-                              b.shape[1], b.shape[0], 1.0, a, a.shape[0],
-                              b, b.shape[0])
+    # this is the correct function call; it came up in during
+    # discussion in https://github.com/SciRuby/nmatrix/issues/374
+    NMatrix::BLAS::cblas_trsm(:row, :left, uplo, false, :nounit, 
+                              b.shape[0], b.shape[1], 1.0, self, self.shape[0],
+                              b, b.shape[1])
     return b
   end
 

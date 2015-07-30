@@ -38,9 +38,7 @@ module MixedModels
       
       # (2) solve the normal equations to get estimates +beta+, +u+ and +b+
       cu = d.l.triangular_solve(:lower, d.lambdat.dot(d.ztwy))
-      # TODO: replace this call to #matrix_valued_solve by #triangular_matrix_valued_solve, possibly after 
-      # issue https://github.com/SciRuby/nmatrix/issues/374 is clarified
-      rzx = d.l.matrix_valued_solve(d.lambdat.dot(d.ztwx))
+      rzx = d.l.triangular_solve(:lower, d.lambdat.dot(d.ztwx))
       d.rxtrx = d.xtwx - (rzx.transpose.dot(rzx))
       # TODO: the following can be replaced by #solve when version 0.2.0 of the nmatrix gem is released
       d.beta = d.rxtrx.matrix_valued_solve(d.xtwy - rzx.transpose.dot(cu))
