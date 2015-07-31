@@ -36,7 +36,9 @@ Feel free to contact me at alexej [dot] go [at] googlemail [dot] com, in case of
 
 ## Usage Examples
 
-[This IRuby notebook](http://nbviewer.ipython.org/github/agisga/mixed_models/blob/master/notebooks/LMM.ipynb) shows an example linear mixed model fit and most of the methods available for objects of class `LMM`.
+* [This IRuby notebook](http://nbviewer.ipython.org/github/agisga/mixed_models/blob/master/notebooks/LMM.ipynb) shows an example linear mixed model fit and most of the methods available for objects of class `LMM`.
+
+* [This IRuby notebook](http://nbviewer.ipython.org/github/agisga/mixed_models/blob/master/notebooks/blog_data.ipynb) shows an application of `mixed_models` to real data, which originate from blog posts from various sources in 2010-2012. The analyzed data set is of nontrivial size (~50000x300) and nontrivial structure (redundant variables, missing values, data transformations, etc.).
 
 Some other examples in form of Ruby code can be found in [the examples folder](https://github.com/agisga/mixed_models/tree/master/examples).
 
