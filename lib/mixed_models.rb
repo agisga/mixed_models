@@ -3,7 +3,7 @@ require 'daru'
 require 'distribution'
 
 require "mixed_models/version.rb"
-require "mixed_models/matrix_methods.rb"
+require "mixed_models/nmatrix_methods.rb"
 require "mixed_models/daru_methods.rb"
 require "mixed_models/LMMData.rb"
 require "mixed_models/Deviance.rb"
