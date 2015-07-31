@@ -646,6 +646,46 @@ class LMM
     return new_response.to_flat_a
   end
 
+  # Perform bootstrapping for linear mixed models to generate bootstrap samples of the parameters.
+  #
+  # === Arguments
+  #
+  # * +nsim+ - number of simulations
+  # * +what_to_collect+ - (optional) a Proc taking a LMM object as input, and generating a 
+  #   statistic of interest; if unspecified, then an Array containing the estimates of the fixed 
+  #   effects terms, the random effects covariance matrix and the scaling factor is generated
+  #   for each simulated model 
+  # * +how_to_simulate+ - (optional) a Proc taking a LMM object as input, and returning a new 
+  #   simulated response as an Array; if unspecified, then LMM#simulate_new_response is used instead
+  # * +type+ - (optional) the argument +type+ for LMM#simulate_new_response; only used if
+  #   +how_to_simulate+ is unspecified
+  #
+  # === References
+  #
+  # * Joseph E., Cavanaugh ; Junfeng, Shang. (2008) An assumption for the development of bootstrap variants of the Akaike information criterion in mixed models. In: Statistics & Probability Letters. Accessible at http://personal.bgsu.edu/~jshang/AICb_assumption.pdf.
+  #
+  def bootstrap(nsim:, how_to_simulate: nil, type: :parametric, what_to_collect: nil)
+    results = (0...nsim).map do |i|
+      new_y = if how_to_simulate then
+                how_to_simulate.call(self)
+              else
+                self.simulate_new_response(type: type)
+              end
+
+      new_model = self.refit(x: @model_data.x, 
+                             y: NMatrix.new([@model_data.n, 1], new_y, dtype: :float64), 
+                             zt: @model_data.zt)
+
+      if what_to_collect then
+        what_to_collect.call(new_model)
+      else
+        [new_model.fix_ef, new_model.sigma2, new_model.sigma_mat]
+      end
+    end
+
+    return results
+  end
+
   # Predictions from the fitted model on new data, conditional on the estimated fixed and random 
   # effects coefficients. Predictions can be made with ot without the inclusion of random
   # effects terms. The data can be either supplied as a # Daru::DataFrame object +newdata+, 
