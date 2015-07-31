@@ -555,6 +555,56 @@ class LMM
     Math::sqrt(@sigma2)
   end
 
+  # Refit the same model on new data. That is, apart from the model matrices X, Z and the response y,
+  # the resulting model is fit using exactly the same parameters as were used to fit +self. 
+  # New data can be supplied either in form of a +Daru::DataFrame+ or in form of model matrices.
+  #
+  # === Arguments
+  #
+  # * +newdata+ - a Daru::DataFrame object containing the data.
+  # * +x+       - fixed effects model matrix, a dense NMatrix object
+  # * +y+       - response vector as a nx1 dense NMatrix
+  # * +zt+      - random effects model matrix, a dense NMatrix object
+  #
+  def refit(newdata: nil, x: nil, y: nil, zt: nil)
+    raise(ArgumentError, "EITHER pass newdata OR x, y and zt") unless newdata || (x && y && zt)
+
+    # refit from Daru::DataFrame
+    if newdata then
+      raise(ArgumentError, "newdata and x or y or zt cannot be passed simultaneously") if newdata && (x || y || zt)
+      raise(ArgumentError, "LMM#refit does not work with a Daru::DataFrame," +
+            "if the model was not fit using a Daru::DataFrame") if @from_daru_args.nil?
+      return LMM.from_daru(response: @from_daru_args[:response], 
+                           fixed_effects: @from_daru_args[:fixed_effects], 
+                           random_effects: @from_daru_args[:random_effects], 
+                           grouping: @from_daru_args[:grouping], 
+                           data: newdata,
+                           weights: @model_data.weights, 
+                           offset: @model_data.offset, 
+                           reml: @reml, 
+                           start_point: @optimization_result.start_point,
+                           epsilon: @optimization_result.epsilon, 
+                           max_iterations: @optimization_result.max_iterations, 
+                           formula: @formula)
+    end
+
+    # refit from raw model matrices
+    raise(ArgumentError, "x and y and zt need to be passed together") unless x && y && zt
+    return LMM.new(x: x, y: y, zt: zt, 
+                   x_col_names: @fix_ef_names, 
+                   z_col_names: @ran_ef_names, 
+                   weights: @model_data.weights, 
+                   offset: @model_data.offset, 
+                   reml: @reml, 
+                   start_point: @optimization_result.start_point,
+                   lower_bound: @optimization_result.lower_bound,
+                   upper_bound: @optimization_result.upper_bound,
+                   epsilon: @optimization_result.epsilon, 
+                   max_iterations: @optimization_result.max_iterations, 
+                   formula: @formula,
+                   &@model_data.thfun)
+  end
+
   # Predictions from the fitted model on new data, conditional on the estimated fixed and random 
   # effects coefficients. Predictions can be made with ot without the inclusion of random
   # effects terms. The data can be either supplied as a # Daru::DataFrame object +newdata+, 

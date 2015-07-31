@@ -59,7 +59,8 @@ module MixedModels
   #
   class NelderMead
 
-    attr_reader :x_minimum, :f_minimum, :epsilon, :max_iterations
+    attr_reader :x_minimum, :f_minimum, :epsilon, :max_iterations,
+                :start_point, :lower_bound, :upper_bound
 
     # === Arguments
     #
@@ -73,6 +74,10 @@ module MixedModels
     #
     def initialize(start_point:, lower_bound: nil, upper_bound: nil, 
                    epsilon: 1e-6, max_iterations: 1e6, &f)
+      @start_point = start_point
+      @lower_bound = lower_bound
+      @upper_bound = upper_bound
+
       @rho   = 1.0 # Reflection coefficient
       @khi   = 2.0 # Expansion coefficient
       @gamma = 0.5 # Contraction coefficient
