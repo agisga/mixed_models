@@ -301,6 +301,66 @@ describe LMM do
         end
       end
     end
+
+    describe "#refit" do
+      let(:new_model) do
+        model_fit.refit(newdata: Daru::DataFrame.from_csv("spec/data/alien_species_refit.csv"))
+      end
+
+      # compare the obtained estimates to the ones obtained for the same data 
+      # by the function lmer from the package lme4 in R:
+      #
+      #  > mod <- lmer(Aggression ~ Age + Species + (Age | Location), data=df1)
+      #  > REMLcrit(mod)
+      #  [1] 363.913
+      #  > fixef(mod)
+      #          (Intercept)                 Age        SpeciesHuman 
+      #           833.686766            2.329822         -400.714091 
+      #           SpeciesOod SpeciesWeepingAngel 
+      #          -838.990305          -99.530996 
+      #  > ranef(mod)
+      #  $Location
+      #            (Intercept)        Age
+      #  Asylum     -132.75250  0.1874363
+      #  Earth       166.43088 -1.3432293
+      #  OodSphere   -33.67838  1.1557931
+      #
+      #  > sigma(mod)
+      #  [1] 7.535235
+
+      it "finds the minimal REML deviance correctly" do
+        expect(new_model.deviance).to be_within(1e-3).of(363.913)
+      end
+
+      it "estimates the residual standard deviation correctly" do
+        expect(new_model.sigma).to be_within(1e-4).of(7.535235)
+      end
+
+      it "estimates the fixed effects terms correctly" do
+        fix_ef_from_R = [833.686766, 2.329822, -400.714091, -838.990305, -99.530996] 
+        new_model.fix_ef.values.each_with_index do |e, i|
+          expect(e).to be_within(1e-4).of(fix_ef_from_R[i])
+        end
+      end
+
+      it "estimates the random effects terms correctly" do
+        ran_ef_from_R = [-132.75250, 0.1874363, 166.43088, -1.3432293, -33.67838, 1.1557931]
+        new_model.ran_ef.values.each_with_index do |e, i|
+          expect(e).to be_within(1e-4).of(ran_ef_from_R[i])
+        end
+      end
+
+      it "names the fixed effects correctly" do
+        fix_ef_names = [:intercept, :Age, :Species_lvl_Human, :Species_lvl_Ood, :Species_lvl_WeepingAngel]
+        expect(new_model.fix_ef.keys).to eq(fix_ef_names)
+      end
+
+      it "names the random effects correctly" do
+        ran_ef_names = [:intercept_Asylum, :Age_Asylum, :intercept_Earth, 
+                        :Age_Earth, :intercept_OodSphere, :Age_OodSphere]
+        expect(new_model.ran_ef.keys).to eq(ran_ef_names)
+      end
+    end
   end
 
   context "fit from raw matrices with fixed and random intercept and slope" do
