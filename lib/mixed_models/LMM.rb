@@ -605,6 +605,47 @@ class LMM
                    &@model_data.thfun)
   end
 
+  # Assuming that the estimated fixed effects and covariances are the true model parameters, 
+  # simulate a new response vector for the data that was used to fit the model.
+  #
+  # === Arguments
+  #
+  # * +type+ - determines how exactly the new response is to be simulated; currently the only
+  #   possible option is +:parameteric+, which defines the new response as 
+  #   y = X*beta + Z*new_b + new_epsilon,
+  #   where new_b is simulated from the multivariate normal distribution with the covariance
+  #   matrix +@sigma_mat+, and new_epsilon are i.i.d. random errors with variance +@sigma2+
+  #   (for more detail see under references).
+  #
+  # === References
+  #
+  # * Joseph E., Cavanaugh ; Junfeng, Shang. (2008) An assumption for the development of bootstrap variants of the Akaike information criterion in mixed models. In: Statistics & Probability Letters. Accessible at http://personal.bgsu.edu/~jshang/AICb_assumption.pdf.
+  #
+  def simulate_new_response(type: :parametric)
+    normal_rng = Distribution::Normal.rng
+    n = @model_data.n
+    q = @model_data.q
+
+    if type == :parametric then
+      # generate the random effects vector from its estimated multivariate normal distribution
+      std_norm_vals = Array.new(q) { normal_rng.call }
+      std_norm_vec = NMatrix.new([q, 1], std_norm_vals, dtype: :float64)
+      cholesky_factor = @sigma_mat.factorize_cholesky[1]
+      new_ran_ef = cholesky_factor.dot(std_norm_vec)
+
+      # generate new random residuals 
+      new_epsilon_a = Array.new(n) { self.sigma * normal_rng.call }
+      new_epsilon = NMatrix.new([n, 1], new_epsilon_a, dtype: :float64)
+
+      # generate new response vector
+      new_response =  (@model_data.x.dot(@model_data.beta) + @model_data.zt.transpose.dot(new_ran_ef) + new_epsilon)
+    else
+      raise(ArgumentError, "Not a valid simulation type")
+    end
+
+    return new_response.to_flat_a
+  end
+
   # Predictions from the fitted model on new data, conditional on the estimated fixed and random 
   # effects coefficients. Predictions can be made with ot without the inclusion of random
   # effects terms. The data can be either supplied as a # Daru::DataFrame object +newdata+, 

@@ -361,6 +361,24 @@ describe LMM do
         expect(new_model.ran_ef.keys).to eq(ran_ef_names)
       end
     end
+
+    describe "#simulate_new_response" do
+      context "with type: :parametric" do
+        let(:new_response) { model_fit.simulate_new_response(type: :parametric) }
+
+        it "generates an Array" do
+          expect(new_response.is_a?(Array)).to be_truthy
+        end
+
+        it "gives an Array of the correct length" do
+          expect(new_response.length).to eq(model_fit.model_data.n)
+        end
+
+        it "gives an Array of Floats" do
+          expect(new_response.all?{|y| y.is_a?(Float)}).to be_truthy
+        end
+      end
+    end
   end
 
   context "fit from raw matrices with fixed and random intercept and slope" do
