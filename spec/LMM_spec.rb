@@ -300,6 +300,22 @@ describe LMM do
           end
         end
       end
+
+      context "with method: :bootstrap" do
+        let(:ci) { model_fit.fix_ef_conf_int(method: :bootstrap, nsim: 50) }
+
+        it "computes a confidence interval for each fixed effects coefficient" do
+          model_fit.fix_ef.each_key do |key|
+            expect(ci[key].is_a?(Array)).to be_truthy
+          end
+        end
+
+        it "computes confidence intervals of positive length" do
+          model_fit.fix_ef.each_key do |key|
+            expect(ci[key][1] - ci[key][0] > 0).to be_truthy
+          end
+        end
+      end
     end
 
     describe "#refit" do

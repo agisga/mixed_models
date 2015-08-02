@@ -487,17 +487,23 @@ class LMM
     return p
   end
 
-  # Returns a Hash containing the confidence intervals of the fixed effects
-  # coefficients.
+  # Returns a Hash containing the confidence intervals of the fixed effects coefficients.
   #
   # === Arguments
   #
   # * +level+  - confidence level, a number between 0 and 1
   # * +method+ - determines the method used to compute the confidence intervals;
-  #   default and currently the only possibility is +:wald+, which 
-  #   approximates the confidence intervals based on the Wald z test statistic 
+  #   possible values are +:wald+ and +:bootstrap+; +:wald+ approximates the confidence 
+  #   intervals based on the Wald z test statistic; +:bootstrap+ constructs the confidence
+  #   intervals from the studentized bootstrap distribution of the fixed effects terms
+  # * +nsim+   - (only relevant if method is +:bootstrap+) number of simulations for 
+  #   the bootstrapping
   #
-  def fix_ef_conf_int(level: 0.95, method: :wald, nsim: 100)
+  # === References
+  #
+  # * https://en.wikipedia.org/wiki/Bootstrapping_%28statistics%29#Deriving_confidence_intervals_from_the_bootstrap_distribution
+  #
+  def fix_ef_conf_int(level: 0.95, method: :wald, nsim: 1000)
     alpha = 1.0 - level
     conf_int = Hash.new
 
@@ -505,10 +511,22 @@ class LMM
     when :wald
       z = Distribution::Normal.p_value(alpha/2.0).abs
       sd = self.fix_ef_sd
-      @fix_ef.each_key do |k|
-        conf_int[k] = Array.new
-        conf_int[k][0] = @fix_ef[k] - z * sd[k]
-        conf_int[k][1] = @fix_ef[k] + z * sd[k]
+      @fix_ef.each_key do |key|
+        conf_int[key] = Array.new
+        conf_int[key][0] = @fix_ef[key] - z * sd[key]
+        conf_int[key][1] = @fix_ef[key] + z * sd[key]
+      end
+    when :bootstrap
+      bootstrap_sample = self.bootstrap(nsim: nsim)
+      bootstrap_df = Daru::DataFrame.rows(bootstrap_sample, order: @fix_ef.keys)
+      @fix_ef.each_key do |key|
+        sd = bootstrap_df[key].sd
+        bootstrap_df[key] = (bootstrap_df[key] - @fix_ef[key]) / sd
+        z1 = bootstrap_df[key].percentile((alpha/2.0)*100.0)
+        z2 = bootstrap_df[key].percentile((1.0 - alpha/2.0)*100.0)
+        conf_int[key] = Array.new
+        conf_int[key][0] = @fix_ef[key] - z2 * sd
+        conf_int[key][1] = @fix_ef[key] - z1 * sd
       end
     else
       raise(NotImplementedError, "Method #{method} is currently not implemented")

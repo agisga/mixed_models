@@ -3,7 +3,11 @@ require 'mixed_models'
 df = Daru::DataFrame.from_csv './data/alien_species.csv'
 model_fit = LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", data: df)
  
-# get 1000 bootstap estimates for the model intercept
+########################################################################
+# Get bootstap estimates for the model intercept,
+# and plot a histogram of the bootstrap distribution
+########################################################################
+
 nsim = 1000
 result = model_fit.bootstrap(nsim: nsim)
 y = Array.new
@@ -28,3 +32,15 @@ bins_center = bins[0...-1].map { |b| b + bin_width/2.0 }
 plot = Plot.new([[bins_center, rel_freq], with: 'boxes', notitle: true],
                 style: 'fill solid 0.5')
 plot.to_png('./plot.png', size: [600, 600])
+
+########################################################################
+# Compute confidence intervals from the bootstrap distribution,
+# and compare them to Wald confidence intervals
+########################################################################
+
+ci_bootstrap = model_fit.fix_ef_conf_int(method: :bootstrap, nsim: nsim)
+ci_wald = model_fit.fix_ef_conf_int(method: :wald)
+puts "Bootstrap:"
+puts Daru::DataFrame.new(ci_bootstrap, index: [:lower95, :upper95]).inspect
+puts "Wald:"
+puts Daru::DataFrame.new(ci_wald, index: [:lower95, :upper95]).inspect
