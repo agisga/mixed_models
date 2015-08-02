@@ -566,6 +566,17 @@ describe LMM do
           expect(e).to be_within(1e-2).of(ran_ef_from_R[i])
         end
       end
+
+      it "names the fixed effects terms correctly" do
+        expect(model_fit.fix_ef_names[0]).to eq(:x0)
+        expect(model_fit.fix_ef_names[1]).to eq(:x1)
+      end
+
+      it "names the random effects terms correctly" do
+        10.times do |i|
+          expect(model_fit.ran_ef_names[i]).to eq("z#{i}".to_sym)
+        end
+      end
     end
 
     describe "#deviance" do

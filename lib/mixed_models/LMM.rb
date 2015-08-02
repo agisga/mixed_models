@@ -116,7 +116,7 @@ class LMM
 
     # Array containing the names of the fixed effects terms
     @fix_ef_names = if x_col_names.nil? then
-                      (0...@model_data.beta.shape[0]).map { |i| "x" + i.to_s } 
+                      (0...@model_data.beta.shape[0]).map { |i| "x#{i}".to_sym } 
                     else
                       x_col_names
                     end
@@ -127,7 +127,7 @@ class LMM
     
     # Array containing the names of the random effects terms
     @ran_ef_names = if z_col_names.nil? then 
-                      (0...@model_data.b.shape[0]).map { |i| "z" + i.to_s }
+                      (0...@model_data.b.shape[0]).map { |i| "z#{i}".to_sym }
                     else
                       z_col_names
                     end
@@ -497,7 +497,7 @@ class LMM
   #   default and currently the only possibility is +:wald+, which 
   #   approximates the confidence intervals based on the Wald z test statistic 
   #
-  def fix_ef_conf_int(level: 0.95, method: :wald)
+  def fix_ef_conf_int(level: 0.95, method: :wald, nsim: 100)
     alpha = 1.0 - level
     conf_int = Hash.new
 
@@ -619,7 +619,9 @@ class LMM
   #
   # === References
   #
-  # * Joseph E., Cavanaugh ; Junfeng, Shang. (2008) An assumption for the development of bootstrap variants of the Akaike information criterion in mixed models. In: Statistics & Probability Letters. Accessible at http://personal.bgsu.edu/~jshang/AICb_assumption.pdf.
+  # * Joseph E., Cavanaugh ; Junfeng, Shang. (2008) An assumption for the development of 
+  #   bootstrap variants of the Akaike information criterion in mixed models. 
+  #   In: Statistics & Probability Letters. Accessible at http://personal.bgsu.edu/~jshang/AICb_assumption.pdf.
   #
   def simulate_new_response(type: :parametric)
     normal_rng = Distribution::Normal.rng
@@ -661,7 +663,9 @@ class LMM
   #
   # === References
   #
-  # * Joseph E., Cavanaugh ; Junfeng, Shang. (2008) An assumption for the development of bootstrap variants of the Akaike information criterion in mixed models. In: Statistics & Probability Letters. Accessible at http://personal.bgsu.edu/~jshang/AICb_assumption.pdf.
+  # * Joseph E., Cavanaugh ; Junfeng, Shang. (2008) An assumption for the development of bootstrap 
+  #   variants of the Akaike information criterion in mixed models. In: Statistics & Probability Letters. 
+  #   Accessible at http://personal.bgsu.edu/~jshang/AICb_assumption.pdf.
   #
   def bootstrap(nsim:, how_to_simulate: nil, type: :parametric, what_to_collect: nil)
     require 'parallel'
