@@ -515,7 +515,7 @@ class LMM
   # === References
   #
   # * A. C. Davison and D. V. Hinkley, Bootstrap Methods and their Application. 
-  # Cambridge Series in Statistical and Probabilistic Mathematics. 1997.
+  #   Cambridge Series in Statistical and Probabilistic Mathematics. 1997.
   #
   def fix_ef_conf_int(level: 0.95, method: :wald, boottype: :studentized, nsim: 1000)
     alpha = 1.0 - level
