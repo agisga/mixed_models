@@ -302,17 +302,40 @@ describe LMM do
       end
 
       context "with method: :bootstrap" do
-        let(:ci) { model_fit.fix_ef_conf_int(method: :bootstrap, nsim: 50) }
+        [:normal, :basic, :studentized, :percentile].each do |boottype|
+          context "with boottype: #{boottype}" do
+            let(:ci) { model_fit.fix_ef_conf_int(method: :bootstrap, boottype: boottype, nsim: 50) }
 
-        it "computes a confidence interval for each fixed effects coefficient" do
-          model_fit.fix_ef.each_key do |key|
-            expect(ci[key].is_a?(Array)).to be_truthy
+            it "computes a confidence interval for each fixed effects coefficient" do
+              model_fit.fix_ef.each_key do |key|
+                expect(ci[key].is_a?(Array)).to be_truthy
+              end
+            end
+
+            it "computes confidence intervals of positive length" do
+              model_fit.fix_ef.each_key do |key|
+                expect(ci[key][1] - ci[key][0] > 0).to be_truthy
+              end
+            end
           end
         end
+      end
 
-        it "computes confidence intervals of positive length" do
-          model_fit.fix_ef.each_key do |key|
-            expect(ci[key][1] - ci[key][0] > 0).to be_truthy
+      context "with method: :all" do
+        let(:ci) { model_fit.fix_ef_conf_int(method: :all, nsim: 50) }
+
+        it "returns a Daru::DataFrame" do
+          expect(ci.is_a?(Daru::DataFrame)).to be_truthy
+        end
+
+        it "returns a Daru::DataFrame containing Arrays of two Floats in each entry" do
+          ci.each_vector do |v|
+            v.each do |e|
+              expect(e.is_a?(Array)).to be_truthy
+              expect(e.length).to eq(2)
+              expect(e[0].is_a?(Float)).to be_truthy
+              expect(e[1].is_a?(Float)).to be_truthy
+            end
           end
         end
       end

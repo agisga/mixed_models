@@ -493,22 +493,108 @@ class LMM
   #
   # * +level+  - confidence level, a number between 0 and 1
   # * +method+ - determines the method used to compute the confidence intervals;
-  #   possible values are +:wald+ and +:bootstrap+; +:wald+ approximates the confidence 
-  #   intervals based on the Wald z test statistic; +:bootstrap+ constructs the confidence
-  #   intervals from the studentized bootstrap distribution of the fixed effects terms
+  #   possible values are +:wald+, +:bootstrap+ and +:all+; 
+  #   +:wald+ approximates the confidence intervals based on the Wald z test statistic; 
+  #   +:bootstrap+ constructs the confidence intervals from the bootstrap distribution of the fixed 
+  #   effects terms, where several sub-types are available (see +boottype+ below);
+  #   +:all+ designates the use of all available methods (including all bootstrap types), and returns a 
+  #   Daru::DataFrame containing confidence bounds obtained from each method.
+  #   Default is +:wald+.
+  # * +boottype+ - (only relevant if method is +:bootstrap+) determines how bootstrap confidence
+  #   intervals are computed:
+  #   +:basic+ computes the basic bootstrap intervals according to (5.6) in Chapter 5 of Davison & Hinkley;
+  #   +:normal+ computes confidence intervals based on the normal distribution using resampling estimates
+  #   for bias correction and variance estimation, as in (5.5) in Chapter 5 of Davison & Hinkley;
+  #   +:studentized+ computes studentized bootstrap confidence intervals, also known as 
+  #   bootstrap-t, as given in (5.7) in Chapter 5 of Davison & Hinkley;
+  #   +:percentile+ computes basic percentile bootstrap confidence intervals as in (5.18) in Davison & Hinkley.
+  #   Default is +:studentized+.
   # * +nsim+   - (only relevant if method is +:bootstrap+) number of simulations for 
   #   the bootstrapping
   #
   # === References
   #
-  # * https://en.wikipedia.org/wiki/Bootstrapping_%28statistics%29#Deriving_confidence_intervals_from_the_bootstrap_distribution
+  # * A. C. Davison and D. V. Hinkley, Bootstrap Methods and their Application. 
+  # Cambridge Series in Statistical and Probabilistic Mathematics. 1997.
   #
-  def fix_ef_conf_int(level: 0.95, method: :wald, nsim: 1000)
+  def fix_ef_conf_int(level: 0.95, method: :wald, boottype: :studentized, nsim: 1000)
     alpha = 1.0 - level
-    conf_int = Hash.new
 
-    case method
-    when :wald
+    #####################################################
+    # Define some auxialliary Proc objects
+    #####################################################
+
+    # Proc computing basic bootstrap confidence intervals
+    bootstrap_basic = Proc.new do |bootstrap_sample|
+      bootstrap_df = Daru::DataFrame.rows(bootstrap_sample, order: @fix_ef.keys)
+      conf_int = Hash.new 
+      @fix_ef.each_key do |key|
+        z1 = bootstrap_df[key].percentile((alpha/2.0)*100.0)
+        z2 = bootstrap_df[key].percentile((1.0 - alpha/2.0)*100.0)
+        conf_int[key] = Array.new
+        conf_int[key][0] = 2.0 * @fix_ef[key] - z2
+        conf_int[key][1] = 2.0 * @fix_ef[key] - z1
+      end
+      conf_int
+    end
+
+    # Proc computing bootstrap normal confidence intervals
+    bootstrap_normal = Proc.new do |bootstrap_sample|
+      bootstrap_df = Daru::DataFrame.rows(bootstrap_sample, order: @fix_ef.keys)
+      conf_int = Hash.new 
+      @fix_ef.each_key do |key|
+        sd = bootstrap_df[key].sd
+        bias = bootstrap_df[key].mean - @fix_ef[key]
+        z = Distribution::Normal.p_value(alpha/2.0).abs
+        conf_int[key] = Array.new
+        conf_int[key][0] = @fix_ef[key] - bias - z * sd
+        conf_int[key][1] = @fix_ef[key] - bias + z * sd
+      end
+      conf_int
+    end
+
+    # Proc computing studentized bootstrap confidence intervals
+    bootstrap_t = Proc.new do |bootstrap_sample|
+      bootstrap_df = Daru::DataFrame.rows(bootstrap_sample, 
+                                          order: bootstrap_sample[0].keys)
+      conf_int = Hash.new 
+      @fix_ef.each_key do |key|
+        key_z = "#{key}_z".to_sym
+        bootstrap_df[key_z] = (bootstrap_df[key] - @fix_ef[key]) / bootstrap_df["#{key}_sd".to_sym] 
+        z1 = bootstrap_df[key_z].percentile((alpha/2.0)*100.0)
+        z2 = bootstrap_df[key_z].percentile((1.0 - alpha/2.0)*100.0)
+        conf_int[key] = Array.new
+        conf_int[key][0] = @fix_ef[key] - z2 * self.fix_ef_sd[key] 
+        conf_int[key][1] = @fix_ef[key] - z1 * self.fix_ef_sd[key] 
+      end
+      conf_int
+    end
+    
+    # Proc computing bootstrap percentile confidence intervals
+    bootstrap_percentile = Proc.new do |bootstrap_sample|
+      bootstrap_df = Daru::DataFrame.rows(bootstrap_sample, order: @fix_ef.keys)
+      conf_int = Hash.new 
+      @fix_ef.each_key do |key|
+        conf_int[key] = Array.new
+        conf_int[key][0] = bootstrap_df[key].percentile((alpha/2.0)*100.0)
+        conf_int[key][1] = bootstrap_df[key].percentile((1.0 - alpha/2.0)*100.0)
+      end
+      conf_int
+    end
+
+    # Proc to supply to #bootstrap as argument what_to_collect
+    fix_ef_and_sd = Proc.new do |model| 
+      result = model.fix_ef
+      cov_mat = self.fix_ef_cov_mat
+      model.fix_ef_names.each_with_index do |name, i| 
+        result["#{name}_sd".to_sym] = Math::sqrt(cov_mat[i,i])
+      end
+      result
+    end
+
+    # Proc to compute Wald Z intervals
+    wald = Proc.new do
+      conf_int = Hash.new 
       z = Distribution::Normal.p_value(alpha/2.0).abs
       sd = self.fix_ef_sd
       @fix_ef.each_key do |key|
@@ -516,18 +602,39 @@ class LMM
         conf_int[key][0] = @fix_ef[key] - z * sd[key]
         conf_int[key][1] = @fix_ef[key] + z * sd[key]
       end
-    when :bootstrap
+      conf_int
+    end
+
+    ##########################################################
+    # Compute the intervals specified by method and boottype
+    ##########################################################
+    
+    case [method, boottype]
+    when [:wald, boottype]
+      conf_int = wald.call
+    when [:bootstrap, :basic]
       bootstrap_sample = self.bootstrap(nsim: nsim)
-      bootstrap_df = Daru::DataFrame.rows(bootstrap_sample, order: @fix_ef.keys)
-      @fix_ef.each_key do |key|
-        sd = bootstrap_df[key].sd
-        bootstrap_df[key] = (bootstrap_df[key] - @fix_ef[key]) / sd
-        z1 = bootstrap_df[key].percentile((alpha/2.0)*100.0)
-        z2 = bootstrap_df[key].percentile((1.0 - alpha/2.0)*100.0)
-        conf_int[key] = Array.new
-        conf_int[key][0] = @fix_ef[key] - z2 * sd
-        conf_int[key][1] = @fix_ef[key] - z1 * sd
-      end
+      conf_int = bootstrap_basic.call(bootstrap_sample)
+    when [:bootstrap, :normal]
+      bootstrap_sample = self.bootstrap(nsim: nsim)
+      conf_int = bootstrap_normal.call(bootstrap_sample)
+    when [:bootstrap, :studentized]
+      bootstrap_sample = self.bootstrap(nsim: nsim, what_to_collect: fix_ef_and_sd)
+      conf_int = bootstrap_t.call(bootstrap_sample)
+    when [:bootstrap, :percentile]
+      bootstrap_sample = self.bootstrap(nsim: nsim)
+      conf_int = bootstrap_percentile.call(bootstrap_sample)
+    when [:all, boottype]
+      conf_int_wald = wald.call
+      bootstrap_sample = self.bootstrap(nsim: nsim, what_to_collect: fix_ef_and_sd)
+      conf_int_basic = bootstrap_basic.call(bootstrap_sample)
+      conf_int_normal = bootstrap_normal.call(bootstrap_sample)
+      conf_int_studentized = bootstrap_t.call(bootstrap_sample)
+      conf_int_percentile = bootstrap_percentile.call(bootstrap_sample)
+      conf_int = Daru::DataFrame.new([conf_int_wald, conf_int_basic, conf_int_normal,
+                                      conf_int_studentized, conf_int_percentile],
+                                     index: [:wald_z, :boot_basic, :boot_norm, 
+                                             :boot_t, :boot_perc])
     else
       raise(NotImplementedError, "Method #{method} is currently not implemented")
     end

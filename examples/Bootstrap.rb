@@ -38,9 +38,22 @@ plot.to_png('./plot.png', size: [600, 600])
 # and compare them to Wald confidence intervals
 ########################################################################
 
+# Compute bootstrap-t confidence intervals for the fixed effects coefficient estimates
 ci_bootstrap = model_fit.fix_ef_conf_int(method: :bootstrap, nsim: nsim)
+puts "Studentized bootstrap confidence intervals:"
+puts ci_bootstrap
+
+# Compute Wald Z confidence intervals for the fixed effects coefficient estimates
 ci_wald = model_fit.fix_ef_conf_int(method: :wald)
-puts "Bootstrap:"
-puts Daru::DataFrame.new(ci_bootstrap, index: [:lower95, :upper95]).inspect
-puts "Wald:"
-puts Daru::DataFrame.new(ci_wald, index: [:lower95, :upper95]).inspect
+puts "Wald Z confidence intervals:"
+puts ci_wald
+
+# Compute confidence intervals for the fixed effects coefficient estimates with all available methods,
+# and display the results in a table
+ci = model_fit.fix_ef_conf_int(method: :all, nsim: nsim)
+# round all results to two decimal places
+ci.each_vector do |v|
+  v.each_index { |i| v[i][0], v[i][1] = v[i][0].round(2), v[i][1].round(2)}
+end
+puts "Confidence intervals obtained with each of the available methods:"
+puts ci.inspect(20)
