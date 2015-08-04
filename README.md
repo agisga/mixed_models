@@ -46,6 +46,8 @@ Further examples can be found in several BLOG posts (see below).
 
 ## Some relevant BLOG posts
 
+* [A (naive) application of linear mixed models to genetics](http://agisga.github.io/mixed_models_applied_to_family_SNP_data/)
+
 * [Wald p-values and confidence intervals for fixed effects coefficients](http://agisga.github.io/MixedModels_p_values_and_CI/)
 
 * [Fitting linear mixed models with a user-friendly R-formula-like interface](http://agisga.github.io/MixedModels_from_formula/)
