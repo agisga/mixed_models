@@ -511,13 +511,15 @@ class LMM
   #   Default is +:studentized+.
   # * +nsim+   - (only relevant if method is +:bootstrap+) number of simulations for 
   #   the bootstrapping
+  # * +parallel+ - (only relevant if method is +:bootstrap+) if true than the bootstrap resampling is performed
+  #   in parallel using all available CPUs; default is true.
   #
   # === References
   #
   # * A. C. Davison and D. V. Hinkley, Bootstrap Methods and their Application. 
   #   Cambridge Series in Statistical and Probabilistic Mathematics. 1997.
   #
-  def fix_ef_conf_int(level: 0.95, method: :wald, boottype: :studentized, nsim: 1000)
+  def fix_ef_conf_int(level: 0.95, method: :wald, boottype: :studentized, nsim: 1000, parallel: true)
     alpha = 1.0 - level
 
     #####################################################
@@ -613,20 +615,22 @@ class LMM
     when [:wald, boottype]
       conf_int = wald.call
     when [:bootstrap, :basic]
-      bootstrap_sample = self.bootstrap(nsim: nsim)
+      bootstrap_sample = self.bootstrap(nsim: nsim, parallel: parallel)
       conf_int = bootstrap_basic.call(bootstrap_sample)
     when [:bootstrap, :normal]
-      bootstrap_sample = self.bootstrap(nsim: nsim)
+      bootstrap_sample = self.bootstrap(nsim: nsim, parallel: parallel)
       conf_int = bootstrap_normal.call(bootstrap_sample)
     when [:bootstrap, :studentized]
-      bootstrap_sample = self.bootstrap(nsim: nsim, what_to_collect: fix_ef_and_sd)
+      bootstrap_sample = self.bootstrap(nsim: nsim, parallel: parallel, 
+                                        what_to_collect: fix_ef_and_sd)
       conf_int = bootstrap_t.call(bootstrap_sample)
     when [:bootstrap, :percentile]
-      bootstrap_sample = self.bootstrap(nsim: nsim)
+      bootstrap_sample = self.bootstrap(nsim: nsim, parallel: parallel)
       conf_int = bootstrap_percentile.call(bootstrap_sample)
     when [:all, boottype]
       conf_int_wald = wald.call
-      bootstrap_sample = self.bootstrap(nsim: nsim, what_to_collect: fix_ef_and_sd)
+      bootstrap_sample = self.bootstrap(nsim: nsim, parallel: parallel, 
+                                        what_to_collect: fix_ef_and_sd)
       conf_int_basic = bootstrap_basic.call(bootstrap_sample)
       conf_int_normal = bootstrap_normal.call(bootstrap_sample)
       conf_int_studentized = bootstrap_t.call(bootstrap_sample)
@@ -785,6 +789,8 @@ class LMM
   #   simulated response as an Array; if unspecified, then LMM#simulate_new_response is used instead
   # * +type+ - (optional) the argument +type+ for LMM#simulate_new_response; only used if
   #   +how_to_simulate+ is unspecified
+  # * +parallel+ - if true than the resampling is done in parallel using all available CPUs; 
+  #   default is true
   #
   # === References
   #
@@ -792,9 +798,11 @@ class LMM
   #   variants of the Akaike information criterion in mixed models. In: Statistics & Probability Letters. 
   #   Accessible at http://personal.bgsu.edu/~jshang/AICb_assumption.pdf.
   #
-  def bootstrap(nsim:, how_to_simulate: nil, type: :parametric, what_to_collect: nil)
+  def bootstrap(nsim:, how_to_simulate: nil, type: :parametric, what_to_collect: nil, parallel: true)
     require 'parallel'
-    results = Parallel.map((0...nsim).to_a) do |i|
+    num_proc = (parallel ? Parallel.processor_count : 0)
+
+    results = Parallel.map((0...nsim).to_a, :in_processes => num_proc) do |i|
       new_y = if how_to_simulate then
                 how_to_simulate.call(self)
               else
@@ -811,6 +819,7 @@ class LMM
         new_model.fix_ef
       end
     end
+
     return results
   end
 
