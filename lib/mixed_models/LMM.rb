@@ -765,11 +765,15 @@ class LMM
       new_ran_ef = cholesky_factor.dot(std_norm_vec)
 
       # generate new random residuals 
-      new_epsilon_a = Array.new(n) { self.sigma * normal_rng.call }
+      sigma = self.sigma
+      new_epsilon_a = n.times.map { |i| (sigma / @model_data.sqrtw[i,i]) * normal_rng.call }
       new_epsilon = NMatrix.new([n, 1], new_epsilon_a, dtype: :float64)
 
       # generate new response vector
       new_response =  (@model_data.x.dot(@model_data.beta) + @model_data.zt.transpose.dot(new_ran_ef) + new_epsilon)
+      
+      # add the offset
+      new_response += @model_data.offset 
     else
       raise(ArgumentError, "Not a valid simulation type")
     end
