@@ -70,6 +70,8 @@ puts "Fixed effects with Wald p-values <0.05:"
 puts p_signif.join(', ')
 
 # bootstrap confidence intervals
+#
+# CAREFUL: with nsim being 1000 the following runs for about 10 hours...
 ci_bootstrap = model_fit.fix_ef_conf_int(method: :bootstrap, nsim: 1000)
 ci_signif = Hash.new
 ci_bootstrap.each_key do |key|
