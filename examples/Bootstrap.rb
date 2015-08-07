@@ -10,15 +10,12 @@ model_fit = LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Locat
 
 nsim = 1000
 result = model_fit.bootstrap(nsim: nsim)
-y = Array.new
-nsim.times do |i|
-  y << result[i][:intercept]
-end
+y = nsim.times.map { |i| result[i][:intercept] }
 
 # plot a histogram of the results
 require 'gnuplotrb'
 include GnuplotRB
-bin_width = (y.max - y.min)/10.0
+bin_width = (y.max - y.min)/30.0
 bins = (y.min..y.max).step(bin_width).to_a
 rel_freq = Array.new(bins.length-1){0.0}
 y.each do |r|
@@ -38,9 +35,9 @@ plot.to_png('./plot.png', size: [600, 600])
 # and compare them to Wald confidence intervals
 ########################################################################
 
-# Compute bootstrap-t confidence intervals for the fixed effects coefficient estimates
-ci_bootstrap = model_fit.fix_ef_conf_int(method: :bootstrap, nsim: nsim)
-puts "Studentized bootstrap confidence intervals:"
+# Compute basic bootstrap confidence intervals for the fixed effects coefficient estimates
+ci_bootstrap = model_fit.fix_ef_conf_int(method: :bootstrap, boottype: :basic, nsim: nsim)
+puts "Basic bootstrap confidence intervals:"
 puts ci_bootstrap
 
 # Compute Wald Z confidence intervals for the fixed effects coefficient estimates
@@ -57,3 +54,18 @@ ci.each_vector do |v|
 end
 puts "Confidence intervals obtained with each of the available methods:"
 puts ci.inspect(20)
+
+# Benchmark parallel vs. single-threaded execution
+require 'benchmark'
+
+puts "Computation of studentized bootstrap confidence intervals single-threaded vs. in parallel:"
+ci_bootstrap = nil
+Benchmark.bm(17) do |bm|
+  bm.report('single-threaded') do
+    ci_bootstrap = model_fit.fix_ef_conf_int(method: :bootstrap, nsim: nsim, parallel: false)
+  end
+
+  bm.report('parallel') do
+    ci_bootstrap = model_fit.fix_ef_conf_int(method: :bootstrap, nsim: nsim, parallel: true)
+  end
+end
