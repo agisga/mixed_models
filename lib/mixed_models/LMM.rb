@@ -781,6 +781,41 @@ class LMM
     return new_response.to_flat_a
   end
 
+  # TODO: This is work in progress. I need to remove side effects on the data frame in #from_daru before
+  # I can finish this. Also, I need to make the data frame available as @model_data.daru_data
+  #
+  # Drop one fixed effect predictor from the model; i.e. refit the model without one predictor variable.
+  # Works only if the model was fit via #from_daru or #from_formula.
+  #
+  # === Arguments
+  #
+  # * +variable+ - name of the fixed effect to be dropped. An interaction effect can be specified as 
+  #   an Array of length two. An intercept term can be denoted as +:intercept+.
+  #
+  def drop(variable: nil)
+    raise(ArgumentError, "Please pass the name of the variable to be dropped") unless variable
+    raise(ArgumentError, "LMM#drop does not work," +
+          "if the model was not fit using a Daru::DataFrame") if @from_daru_args.nil?
+    raise(ArgumentError, "variable is not one of the fixed effects of self") unless @from_daru_args[:fixed_effects].include? variable
+
+    fe = Marshal.load(Marshal.dump(@from_daru_args[:fixed_effects]))
+    variable_ind = fe.find_index variable
+    fe.delete_at variable_ind
+
+#    return LMM.from_daru(response: @from_daru_args[:response], 
+#                         fixed_effects: fe,
+#                         random_effects: @from_daru_args[:random_effects], 
+#                         grouping: @from_daru_args[:grouping], 
+#                         data: @model_data.daru_data,
+#                         weights: @model_data.weights, 
+#                         offset: @model_data.offset, 
+#                         reml: @reml, 
+#                         start_point: @optimization_result.start_point,
+#                         epsilon: @optimization_result.epsilon, 
+#                         max_iterations: @optimization_result.max_iterations, 
+#                         formula: @formula)
+  end
+
   # Perform bootstrapping for linear mixed models to generate bootstrap samples of the parameters.
   #
   # === Arguments
