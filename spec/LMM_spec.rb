@@ -73,6 +73,30 @@ describe LMM do
                           :Age_Earth, :intercept_OodSphere, :Age_OodSphere]
           expect(model_fit.ran_ef.keys).to eq(ran_ef_names)
         end
+
+        it "has no side effects on the input parameters" do
+          form = "Aggression ~ Age + Species + (Age | Location)"
+          reml = true
+          df = Daru::DataFrame.from_csv("spec/data/alien_species.csv")
+          weights = Array.new(df.nrows) { 1.0 }
+          offset = 0.0
+          start_point = [1.0, 0.5, 1.0]
+          eps = 1e-6
+          max_iter = 1e6 
+          # fit the model
+          mod = LMM.from_formula(formula: form, reml: reml, weights: weights,
+                                 offset: offset, start_point: start_point,
+                                 epsilon: eps, max_iterations: max_iter, data: df)
+          # check for side effects
+          expect(form).to eq("Aggression ~ Age + Species + (Age | Location)")
+          expect(reml).to eq(true)
+          expect(Daru::DataFrame.from_csv("spec/data/alien_species.csv")).to eq(df)
+          expect(Array.new(df.nrows) { 1.0 }).to eq(weights)
+          expect(offset).to eq(0.0)
+          expect(start_point).to eq([1.0, 0.5, 1.0])
+          expect(eps).to eq(1e-6)
+          expect(max_iter).to eq(1e6)
+        end
       end
 
       context "using deviance function instead of REML" do
@@ -166,6 +190,37 @@ describe LMM do
           ran_ef_names = [:intercept_Asylum, :Age_Asylum, :intercept_Earth, 
                           :Age_Earth, :intercept_OodSphere, :Age_OodSphere]
           expect(model_fit.ran_ef.keys).to eq(ran_ef_names)
+        end
+
+        it "has no side effects on the input parameters" do
+          resp = :Aggression
+          fe = [:intercept, :Age, :Species]
+          re = [[:intercept, :Age]]
+          gr = [:Location]
+          reml = true
+          df = Daru::DataFrame.from_csv("spec/data/alien_species.csv")
+          weights = Array.new(df.nrows) { 1.0 }
+          offset = 0.0
+          start_point = [1.0, 0.5, 1.0]
+          eps = 1e-6
+          max_iter = 1e6 
+          # fit the model
+          mod = LMM.from_daru(response: resp, fixed_effects: fe, random_effects: re, 
+                              weights: weights, offset: offset, start_point: start_point,
+                              epsilon: eps, max_iterations: max_iter, grouping: gr, 
+                              reml: reml, data: df)
+          # check for side effects
+          expect(resp).to eq(:Aggression)
+          expect(fe).to eq([:intercept, :Age, :Species])
+          expect(re).to eq([[:intercept, :Age]])
+          expect(gr).to eq([:Location])
+          expect(reml).to eq(true)
+          expect(Daru::DataFrame.from_csv("spec/data/alien_species.csv")).to eq(df)
+          expect(Array.new(df.nrows) { 1.0 }).to eq(weights)
+          expect(offset).to eq(0.0)
+          expect(start_point).to eq([1.0, 0.5, 1.0])
+          expect(eps).to eq(1e-6)
+          expect(max_iter).to eq(1e6)
         end
       end
 
@@ -415,7 +470,7 @@ describe LMM do
         context "with method: :bootstrap" do
           [:normal, :basic, :studentized, :percentile].each do |boottype|
             context "with boottype: #{boottype}" do
-              let(:ci) { model_fit.fix_ef_conf_int(method: :bootstrap, boottype: boottype, nsim: 50) }
+              let(:ci) { model_fit.fix_ef_conf_int(method: :bootstrap, boottype: boottype, nsim: 5) }
 
               it "computes a confidence interval for each fixed effects coefficient" do
                 model_fit.fix_ef.each_key do |key|
@@ -654,7 +709,7 @@ describe LMM do
         context "with method: :bootstrap" do
           [:normal, :basic, :studentized, :percentile].each do |boottype|
             context "with boottype: #{boottype}" do
-              let(:ci) { model_fit.fix_ef_conf_int(method: :bootstrap, boottype: boottype, nsim: 50) }
+              let(:ci) { model_fit.fix_ef_conf_int(method: :bootstrap, boottype: boottype, nsim: 5) }
 
               it "computes a confidence interval for each fixed effects coefficient" do
                 model_fit.fix_ef.each_key do |key|

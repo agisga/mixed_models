@@ -201,7 +201,9 @@ class LMM
           "If you want to exclude an intercept term use '0'.") if formula.include? "intercept"
     raise(ArgumentError, "formula must contain a '~' symbol") unless formula.include? "~"
 
-    original_formula = formula.clone
+    # to prevent side effects on the passed formula
+    original_formula = formula
+    formula = original_formula.clone
 
     # remove whitespaces
     formula.gsub!(%r{\s+}, "")
@@ -324,24 +326,31 @@ class LMM
     raise(ArgumentError, "data should be a Daru::DataFrame") unless data.is_a?(Daru::DataFrame)
 
     given_args = Marshal.load(Marshal.dump({response: response, fixed_effects: fixed_effects,
-                                            random_effects: random_effects, grouping: grouping}))
+                                            random_effects: random_effects, grouping: grouping, 
+                                            data: data}))
 
-    n = data.size
+    # to prevent side effects on these parameters
+    fixed_effects_copy = Marshal.load(Marshal.dump(fixed_effects))
+    random_effects_copy = Marshal.load(Marshal.dump(random_effects))
+    grouping_copy = Marshal.load(Marshal.dump(grouping))
+    data_copy = Marshal.load(Marshal.dump(data)) 
+
+    n = data_copy.size
 
     ################################################################
-    # Adjust +data+, +fixed_effects+, +random_effects+ and 
-    # +grouping+ for inclusion or exclusion of an intercept term, 
+    # Adjust +data_copy+, +fixed_effects_copy+, +random_effects_copy+ and 
+    # +grouping_copy+ for inclusion or exclusion of an intercept term, 
     # categorical variables, interaction effects and nested 
     # grouping factors
     ################################################################
 
-    adjusted = MixedModels::adjust_lmm_from_daru_inputs(fixed_effects: fixed_effects, 
-                                                        random_effects: random_effects, 
-                                                        grouping: grouping, data: data)
-    fixed_effects  = adjusted[:fixed_effects]
-    random_effects = adjusted[:random_effects]
-    grouping       = adjusted[:grouping]
-    data           = adjusted[:data]
+    adjusted = MixedModels::adjust_lmm_from_daru_inputs(fixed_effects: fixed_effects_copy, 
+                                                        random_effects: random_effects_copy, 
+                                                        grouping: grouping_copy, data: data_copy)
+    fixed_effects_copy  = adjusted[:fixed_effects]
+    random_effects_copy = adjusted[:random_effects]
+    grouping_copy       = adjusted[:grouping]
+    data_copy           = adjusted[:data]
 
     ################################################################
     # Construct model matrices and vectors, covariance function,
@@ -349,28 +358,28 @@ class LMM
     ################################################################
 
     # construct the response vector
-    y = NMatrix.new([n,1], data[response].to_a, dtype: :float64)
+    y = NMatrix.new([n,1], data_copy[response].to_a, dtype: :float64)
 
     # construct the fixed effects design matrix
-    x_frame     = data[*fixed_effects]
+    x_frame     = data_copy[*fixed_effects_copy]
     x           = x_frame.to_nm
-    x_col_names = fixed_effects.clone # column names of the x matrix
+    x_col_names = fixed_effects_copy.clone # column names of the x matrix
 
     # construct the random effects model matrix and covariance function 
-    num_groups = grouping.length
-    raise(ArgumentError, "Length of +random_effects+ mismatches length of +grouping+") unless random_effects.length == num_groups
+    num_groups = grouping_copy.length
+    raise(ArgumentError, "Length of +random_effects+ mismatches length of +grouping+") unless random_effects_copy.length == num_groups
     ran_ef_raw_mat = Array.new
     ran_ef_grp     = Array.new
     num_ran_ef     = Array.new
     num_grp_levels = Array.new
     0.upto(num_groups-1) do |i|
-      xi_frame = data[*random_effects[i]]
+      xi_frame = data_copy[*random_effects_copy[i]]
       ran_ef_raw_mat[i] = xi_frame.to_nm
-      ran_ef_grp[i] = data[grouping[i]].to_a
+      ran_ef_grp[i] = data_copy[grouping_copy[i]].to_a
       num_ran_ef[i] = ran_ef_raw_mat[i].shape[1]
       num_grp_levels[i] = ran_ef_grp[i].uniq.length
     end
-    z_result_hash = MixedModels::mk_ran_ef_model_matrix(ran_ef_raw_mat, ran_ef_grp, random_effects)
+    z_result_hash = MixedModels::mk_ran_ef_model_matrix(ran_ef_raw_mat, ran_ef_grp, random_effects_copy)
     z             = z_result_hash[:z] 
     z_col_names   = z_result_hash[:names] # column names of the z matrix
     thfun         = MixedModels::mk_ran_ef_cov_fun(num_ran_ef, num_grp_levels)
@@ -782,7 +791,7 @@ class LMM
   end
 
   # TODO: This is work in progress. I need to remove side effects on the data frame in #from_daru before
-  # I can finish this. Also, I need to make the data frame available as @model_data.daru_data
+  # I can finish this. 
   #
   # Drop one fixed effect predictor from the model; i.e. refit the model without one predictor variable.
   # Works only if the model was fit via #from_daru or #from_formula.
@@ -806,7 +815,7 @@ class LMM
 #                         fixed_effects: fe,
 #                         random_effects: @from_daru_args[:random_effects], 
 #                         grouping: @from_daru_args[:grouping], 
-#                         data: @model_data.daru_data,
+#                         data: @from_daru_args[:data],
 #                         weights: @model_data.weights, 
 #                         offset: @model_data.offset, 
 #                         reml: @reml, 
