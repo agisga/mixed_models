@@ -823,6 +823,53 @@ describe LMM do
           end
         end
       end
+
+      describe "#drop" do
+        let(:new_model) { model_fit.drop(:Species) }
+
+        # Compare to the results obtained in R vie lme4:
+        #
+        #  > mod <- lmer(Aggression ~ Age + (Age | Location), data=df)
+        #  Warning message:
+        #  In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+        #    Model is nearly unidentifiable: very large eigenvalue
+        #   - Rescale variables?
+        #  > REMLcrit(mod)
+        #  [1] 1440.306
+        #  > fixef(mod)
+        #  (Intercept)         Age 
+        #   725.645778   -0.631179 
+        #  
+        #  > sigma(mod)
+        #  [1] 335.1927
+        #
+
+        it "finds the minimal REML deviance correctly" do
+          expect(new_model.deviance).to be_within(1e-3).of(1440.306)
+        end
+
+        it "estimates the residual standard deviation correctly" do
+          expect(new_model.sigma).to be_within(1e-2).of(335.1927)
+        end
+
+        it "estimates the fixed effects terms correctly" do
+          fix_ef_from_R = [725.645778, -0.631179] 
+          new_model.fix_ef.values.each_with_index do |e, i|
+            expect(e).to be_within(0.1).of(fix_ef_from_R[i])
+          end
+        end
+
+        it "names the fixed effects correctly" do
+          fix_ef_names = [:intercept, :Age]
+          expect(new_model.fix_ef.keys).to eq(fix_ef_names)
+        end
+
+        it "names the random effects correctly" do
+          ran_ef_names = [:intercept_Asylum, :Age_Asylum, :intercept_Earth, 
+                          :Age_Earth, :intercept_OodSphere, :Age_OodSphere]
+          expect(new_model.ran_ef.keys).to eq(ran_ef_names)
+        end
+      end
     end
   end
 
@@ -1210,6 +1257,30 @@ describe LMM do
 
       it "estimates the residual standard deviation correctly" do
         expect(new_model.sigma).to be_within(1e-4).of(0.8934167)
+      end
+    end
+
+    describe "#simulate_new_response" do
+      context "with type: :parametric" do
+        let(:new_response) { model_fit.simulate_new_response(type: :parametric) }
+
+        it "generates an Array" do
+          expect(new_response.is_a?(Array)).to be_truthy
+        end
+
+        it "gives an Array of the correct length" do
+          expect(new_response.length).to eq(model_fit.model_data.n)
+        end
+
+        it "gives an Array of Floats" do
+          expect(new_response.all?{|y| y.is_a?(Float)}).to be_truthy
+        end
+      end
+    end
+
+    describe "#drop" do
+      it "should raise NotImplementedError" do
+        expect{model_fit.drop(:x0)}.to raise_error(NotImplementedError)
       end
     end
   end
