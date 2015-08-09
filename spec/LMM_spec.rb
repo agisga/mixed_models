@@ -508,8 +508,8 @@ describe LMM do
           end
         end
 
-        describe "#drop" do
-          let(:new_model) { model_fit.drop(:Species) }
+        describe "#drop_fix_ef" do
+          let(:new_model) { model_fit.drop_fix_ef(:Species) }
 
           # Compare to the results obtained in R vie lme4:
           #
@@ -963,9 +963,9 @@ describe LMM do
       end
     end
 
-    describe "#drop" do
+    describe "#drop_fix_ef" do
       it "should raise NotImplementedError" do
-        expect{model_fit.drop(:x0)}.to raise_error(NotImplementedError)
+        expect{model_fit.drop_fix_ef(:x0)}.to raise_error(NotImplementedError)
       end
     end
   end

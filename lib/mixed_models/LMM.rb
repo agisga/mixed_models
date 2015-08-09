@@ -798,10 +798,10 @@ class LMM
   # * +variable+ - name of the fixed effect to be dropped. An interaction effect can be specified as 
   #   an Array of length two. An intercept term can be denoted as +:intercept+.
   #
-  def drop(variable)
+  def drop_fix_ef(variable)
     raise(ArgumentError, "Please pass the name of the variable to be dropped") unless variable
     raise(NotImplementedError, "LMM#drop does not work if the model was not fit using a Daru::DataFrame") if @from_daru_args.nil?
-    raise(ArgumentError, "variable is not one of the fixed effects of self") unless @from_daru_args[:fixed_effects].include? variable
+    raise(ArgumentError, "variable is not one of the fixed effects of the linear mixed model") unless @from_daru_args[:fixed_effects].include? variable
 
     fe = Marshal.load(Marshal.dump(@from_daru_args[:fixed_effects]))
     variable_ind = fe.find_index variable
