@@ -10,864 +10,549 @@ describe LMM do
   ############################################################################
   ############################################################################
   
-  context "with numeric and categorical fixed effects and numeric random effects" do
 
-    #############################################################################
-    # Test various constructor LMM methods for fits from a data frame
-    #############################################################################
+  #############################################################################
+  # Test various LMM constructor methods for fits from a Daru::DataFrame
+  #############################################################################
 
-    describe "#from_formula" do
-      context "using REML deviance" do
-        subject(:model_fit) do
-          LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", reml: true,
-                           data: Daru::DataFrame.from_csv("spec/data/alien_species.csv"))
-        end
+  ["#from_formula", "#from_daru"].each do |constructor_method|
+    describe constructor_method do
+      context "with numeric and categorical fixed effects and numeric random effects" do
 
-        # compare the obtained estimates to the ones obtained for the same data 
-        # by the function lmer from the package lme4 in R:
-        #
-        #  > mod <- lmer("Aggression~Age+Species+(Age|Location)", data=alien.species)
-        #  > REMLcrit(mod)
-        #  [1] 333.7155
-        #  > fixef(mod)
-        #          (Intercept)                 Age        SpeciesHuman          SpeciesOod SpeciesWeepingAngel 
-        #        1016.28672021         -0.06531615       -499.69369521       -899.56932076       -199.58895813 
-        #  > ranef(mod)
-        #  $Location
-        #            (Intercept)         Age
-        #  Asylum     -116.68080 -0.03353392
-        #  Earth        83.86571 -0.13613995
-        #  OodSphere    32.81509  0.16967387
-        #  > sigma(mod)
-        #  [1] 0.9745324
+        let(:df) { Daru::DataFrame.from_csv("spec/data/alien_species.csv") }
 
-        it "finds the minimal REML deviance correctly" do
-          expect(model_fit.deviance).to be_within(1e-4).of(333.7155)
-        end
+        context "using REML deviance" do
 
-        it "estimates the residual standard deviation correctly" do
-          expect(model_fit.sigma).to be_within(1e-4).of(0.9745)
-        end
+          case constructor_method
+          when "#from_formula"
+            subject(:model_fit) do 
+              LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", 
+                               reml: true, data: df)
+            end
+          when "#from_daru"
+            subject(:model_fit) do
+              LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age, :Species], 
+                            random_effects: [[:intercept, :Age]], grouping: [:Location], reml: true, data: df)
+            end
+          end
 
-        it "estimates the fixed effects terms correctly" do
-          fix_ef_from_R = [1016.2867, -0.06532, -499.6937, -899.5693, -199.5890] 
-          model_fit.fix_ef.values.each_with_index do |e, i|
-            expect(e).to be_within(1e-4).of(fix_ef_from_R[i])
+          # compare the obtained estimates to the ones obtained for the same data 
+          # by the function lmer from the package lme4 in R:
+          #
+          #  > mod <- lmer("Aggression~Age+Species+(Age|Location)", data=alien.species)
+          #  > REMLcrit(mod)
+          #  [1] 333.7155
+          #  > fixef(mod)
+          #          (Intercept)                 Age        SpeciesHuman          SpeciesOod SpeciesWeepingAngel 
+          #        1016.28672021         -0.06531615       -499.69369521       -899.56932076       -199.58895813 
+          #  > ranef(mod)
+          #  $Location
+          #            (Intercept)         Age
+          #  Asylum     -116.68080 -0.03353392
+          #  Earth        83.86571 -0.13613995
+          #  OodSphere    32.81509  0.16967387
+          #  > sigma(mod)
+          #  [1] 0.9745324
+
+          it "finds the minimal REML deviance correctly" do
+            expect(model_fit.deviance).to be_within(1e-4).of(333.7155)
+          end
+
+          it "estimates the residual standard deviation correctly" do
+            expect(model_fit.sigma).to be_within(1e-4).of(0.9745)
+          end
+
+          it "estimates the fixed effects terms correctly" do
+            fix_ef_from_R = [1016.2867, -0.06532, -499.6937, -899.5693, -199.5890] 
+            model_fit.fix_ef.values.each_with_index do |e, i|
+              expect(e).to be_within(1e-4).of(fix_ef_from_R[i])
+            end
+          end
+
+          it "estimates the random effects terms correctly" do
+            ran_ef_from_R = [-116.6808, -0.0335, 83.8657, -0.1361, 32.8151, 0.1697] 
+            model_fit.ran_ef.values.each_with_index do |e, i|
+              expect(e).to be_within(1e-4).of(ran_ef_from_R[i])
+            end
+          end
+
+          it "names the fixed effects correctly" do
+            fix_ef_names = [:intercept, :Age, :Species_lvl_Human, :Species_lvl_Ood, :Species_lvl_WeepingAngel]
+            expect(model_fit.fix_ef.keys).to eq(fix_ef_names)
+          end
+
+          it "names the random effects correctly" do
+            ran_ef_names = [:intercept_Asylum, :Age_Asylum, :intercept_Earth, 
+                            :Age_Earth, :intercept_OodSphere, :Age_OodSphere]
+            expect(model_fit.ran_ef.keys).to eq(ran_ef_names)
+          end
+
+          it "has no side effects on the input parameters" do
+            reml = true
+            df_unaltered = Daru::DataFrame.from_csv("spec/data/alien_species.csv")
+            weights = Array.new(df_unaltered.nrows) { 1.0 }
+            offset = 0.0
+            start_point = [1.0, 0.5, 1.0]
+            eps = 1e-6
+            max_iter = 1e6 
+
+            case constructor_method
+            when "#from_formula"
+              form = "Aggression ~ Age + Species + (Age | Location)"
+              mod = LMM.from_formula(formula: form, reml: reml, weights: weights,
+                                     offset: offset, start_point: start_point,
+                                     epsilon: eps, max_iterations: max_iter, data: df_unaltered)
+              expect(form).to eq("Aggression ~ Age + Species + (Age | Location)")
+            when "#from_daru"
+              resp = :Aggression
+              fe = [:intercept, :Age, :Species]
+              re = [[:intercept, :Age]]
+              gr = [:Location]
+              mod = LMM.from_daru(response: resp, fixed_effects: fe, random_effects: re, 
+                                  weights: weights, offset: offset, start_point: start_point,
+                                  epsilon: eps, max_iterations: max_iter, grouping: gr, 
+                                  reml: reml, data: df_unaltered)
+              expect(resp).to eq(:Aggression)
+              expect(fe).to eq([:intercept, :Age, :Species])
+              expect(re).to eq([[:intercept, :Age]])
+              expect(gr).to eq([:Location])
+            end
+
+            expect(reml).to eq(true)
+            expect(Daru::DataFrame.from_csv("spec/data/alien_species.csv")).to eq(df_unaltered)
+            expect(Array.new(df_unaltered.nrows) { 1.0 }).to eq(weights)
+            expect(offset).to eq(0.0)
+            expect(start_point).to eq([1.0, 0.5, 1.0])
+            expect(eps).to eq(1e-6)
+            expect(max_iter).to eq(1e6)
           end
         end
 
-        it "estimates the random effects terms correctly" do
-          ran_ef_from_R = [-116.6808, -0.0335, 83.8657, -0.1361, 32.8151, 0.1697] 
-          model_fit.ran_ef.values.each_with_index do |e, i|
-            expect(e).to be_within(1e-4).of(ran_ef_from_R[i])
+        context "using deviance function instead of REML" do
+
+          case constructor_method
+          when "#from_formula"
+            subject(:model_fit) do 
+              LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", 
+                               reml: false, data: df)
+            end
+          when "#from_daru"
+            subject(:model_fit) do
+              LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age, :Species], 
+                            random_effects: [[:intercept, :Age]], grouping: [:Location], reml: false, data: df)
+            end
           end
-        end
 
-        it "names the fixed effects correctly" do
-          fix_ef_names = [:intercept, :Age, :Species_lvl_Human, :Species_lvl_Ood, :Species_lvl_WeepingAngel]
-          expect(model_fit.fix_ef.keys).to eq(fix_ef_names)
-        end
+          # compare the obtained estimates to the ones obtained for the same data 
+          # by the function lmer from the package lme4 in R:
+          #
+          #  > mod <- lmer("Aggression~Age+Species+(Age|Location)", data=alien.species, REML=FALSE)
+          #  > deviance(mod)
+          #  [1] 337.5662
+          #  > fixef(mod)
+          #          (Intercept)                 Age        SpeciesHuman          SpeciesOod SpeciesWeepingAngel 
+          #        1016.28645465         -0.06531612       -499.69371063       -899.56876058       -199.58889858 
+          #  > ranef(mod)
+          #  $Location
+          #            (Intercept)         Age
+          #  Asylum     -116.68051 -0.03353435
+          #  Earth        83.86296 -0.13612453
+          #  OodSphere    32.81756  0.16965888
+          #  > sigma(mod)
+          #  [1] 0.9588506
 
-        it "names the random effects correctly" do
-          ran_ef_names = [:intercept_Asylum, :Age_Asylum, :intercept_Earth, 
-                          :Age_Earth, :intercept_OodSphere, :Age_OodSphere]
-          expect(model_fit.ran_ef.keys).to eq(ran_ef_names)
-        end
-
-        it "has no side effects on the input parameters" do
-          form = "Aggression ~ Age + Species + (Age | Location)"
-          reml = true
-          df = Daru::DataFrame.from_csv("spec/data/alien_species.csv")
-          weights = Array.new(df.nrows) { 1.0 }
-          offset = 0.0
-          start_point = [1.0, 0.5, 1.0]
-          eps = 1e-6
-          max_iter = 1e6 
-          # fit the model
-          mod = LMM.from_formula(formula: form, reml: reml, weights: weights,
-                                 offset: offset, start_point: start_point,
-                                 epsilon: eps, max_iterations: max_iter, data: df)
-          # check for side effects
-          expect(form).to eq("Aggression ~ Age + Species + (Age | Location)")
-          expect(reml).to eq(true)
-          expect(Daru::DataFrame.from_csv("spec/data/alien_species.csv")).to eq(df)
-          expect(Array.new(df.nrows) { 1.0 }).to eq(weights)
-          expect(offset).to eq(0.0)
-          expect(start_point).to eq([1.0, 0.5, 1.0])
-          expect(eps).to eq(1e-6)
-          expect(max_iter).to eq(1e6)
-        end
-      end
-
-      context "using deviance function instead of REML" do
-        subject(:model_fit) do
-          LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", reml: false,
-                           data: Daru::DataFrame.from_csv("spec/data/alien_species.csv"))
-        end
-
-        # compare the obtained estimates to the ones obtained for the same data 
-        # by the function lmer from the package lme4 in R:
-        #
-        #  > mod <- lmer("Aggression~Age+Species+(Age|Location)", data=alien.species, REML=FALSE)
-        #  > deviance(mod)
-        #  [1] 337.5662
-        #  > fixef(mod)
-        #          (Intercept)                 Age        SpeciesHuman          SpeciesOod SpeciesWeepingAngel 
-        #        1016.28645465         -0.06531612       -499.69371063       -899.56876058       -199.58889858 
-        #  > ranef(mod)
-        #  $Location
-        #            (Intercept)         Age
-        #  Asylum     -116.68051 -0.03353435
-        #  Earth        83.86296 -0.13612453
-        #  OodSphere    32.81756  0.16965888
-        #  > sigma(mod)
-        #  [1] 0.9588506
-
-        it "finds the minimal deviance correctly" do
-          expect(model_fit.deviance).to be_within(1e-4).of(337.5662)
-        end
-
-        it "estimates the residual standard deviation correctly" do
-          expect(model_fit.sigma).to be_within(1e-4).of(0.9588)
-        end
-
-        it "estimates the fixed effects terms correctly" do
-          fix_ef_from_R = [1016.2864, -0.06531, -499.6937, -899.5688, -199.5889] 
-          model_fit.fix_ef.values.each_with_index do |e, i|
-            expect(e).to be_within(1e-4).of(fix_ef_from_R[i])
+          it "finds the minimal deviance correctly" do
+            expect(model_fit.deviance).to be_within(1e-4).of(337.5662)
           end
-        end
 
-        it "estimates the random effects terms correctly" do
-          ran_ef_from_R = [-116.6805, -0.0335, 83.8630, -0.1361, 32.8176, 0.1697] 
-          model_fit.ran_ef.values.each_with_index do |e, i|
-            expect(e).to be_within(1e-4).of(ran_ef_from_R[i])
+          it "estimates the residual standard deviation correctly" do
+            expect(model_fit.sigma).to be_within(1e-4).of(0.9588)
+          end
+
+          it "estimates the fixed effects terms correctly" do
+            fix_ef_from_R = [1016.2864, -0.06531, -499.6937, -899.5688, -199.5889] 
+            model_fit.fix_ef.values.each_with_index do |e, i|
+              expect(e).to be_within(1e-4).of(fix_ef_from_R[i])
+            end
+          end
+
+          it "estimates the random effects terms correctly" do
+            ran_ef_from_R = [-116.6805, -0.0335, 83.8630, -0.1361, 32.8176, 0.1697] 
+            model_fit.ran_ef.values.each_with_index do |e, i|
+              expect(e).to be_within(1e-4).of(ran_ef_from_R[i])
+            end
           end
         end
       end
     end
+  end
 
-    describe "#from_daru" do
-      context "using REML deviance" do
-        subject(:model_fit) do
-          LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age, :Species], 
-                        random_effects: [[:intercept, :Age]], grouping: [:Location], reml: true,
-                        data: Daru::DataFrame.from_csv("spec/data/alien_species.csv"))
-        end
+  #############################################################################
+  # Test various LMM non-constructor methods for fits from a Daru::DataFrame 
+  #############################################################################
 
-        # compare the obtained estimates to the ones obtained for the same data 
-        # by the function lmer from the package lme4 in R:
-        # Same as using #from_formula
+  ["#from_formula", "#from_daru"].each do |constructor_method|
+    context "when model obtained via #{constructor_method}" do
+      context "with numeric and categorical fixed effects and numeric random effects" do
+        let(:df) { Daru::DataFrame.from_csv("spec/data/alien_species.csv") }
 
-        it "finds the minimal REML deviance correctly" do
-          expect(model_fit.deviance).to be_within(1e-4).of(333.7155)
-        end
-
-        it "estimates the residual standard deviation correctly" do
-          expect(model_fit.sigma).to be_within(1e-4).of(0.9745)
-        end
-
-        it "estimates the fixed effects terms correctly" do
-          fix_ef_from_R = [1016.2867, -0.06532, -499.6937, -899.5693, -199.5890] 
-          model_fit.fix_ef.values.each_with_index do |e, i|
-            expect(e).to be_within(1e-4).of(fix_ef_from_R[i])
+        case constructor_method
+        when "#from_formula"
+          subject(:model_fit) { LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", data: df) }
+        when "#from_daru"
+          subject(:model_fit) do
+            LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age, :Species], 
+                          random_effects: [[:intercept, :Age]], grouping: [:Location], reml: true, data: df)
           end
-        end
-
-        it "estimates the random effects terms correctly" do
-          ran_ef_from_R = [-116.6808, -0.0335, 83.8657, -0.1361, 32.8151, 0.1697] 
-          model_fit.ran_ef.values.each_with_index do |e, i|
-            expect(e).to be_within(1e-4).of(ran_ef_from_R[i])
-          end
-        end
-
-        it "names the fixed effects correctly" do
-          fix_ef_names = [:intercept, :Age, :Species_lvl_Human, :Species_lvl_Ood, :Species_lvl_WeepingAngel]
-          expect(model_fit.fix_ef.keys).to eq(fix_ef_names)
-        end
-
-        it "names the random effects correctly" do
-          ran_ef_names = [:intercept_Asylum, :Age_Asylum, :intercept_Earth, 
-                          :Age_Earth, :intercept_OodSphere, :Age_OodSphere]
-          expect(model_fit.ran_ef.keys).to eq(ran_ef_names)
-        end
-
-        it "has no side effects on the input parameters" do
-          resp = :Aggression
-          fe = [:intercept, :Age, :Species]
-          re = [[:intercept, :Age]]
-          gr = [:Location]
-          reml = true
-          df = Daru::DataFrame.from_csv("spec/data/alien_species.csv")
-          weights = Array.new(df.nrows) { 1.0 }
-          offset = 0.0
-          start_point = [1.0, 0.5, 1.0]
-          eps = 1e-6
-          max_iter = 1e6 
-          # fit the model
-          mod = LMM.from_daru(response: resp, fixed_effects: fe, random_effects: re, 
-                              weights: weights, offset: offset, start_point: start_point,
-                              epsilon: eps, max_iterations: max_iter, grouping: gr, 
-                              reml: reml, data: df)
-          # check for side effects
-          expect(resp).to eq(:Aggression)
-          expect(fe).to eq([:intercept, :Age, :Species])
-          expect(re).to eq([[:intercept, :Age]])
-          expect(gr).to eq([:Location])
-          expect(reml).to eq(true)
-          expect(Daru::DataFrame.from_csv("spec/data/alien_species.csv")).to eq(df)
-          expect(Array.new(df.nrows) { 1.0 }).to eq(weights)
-          expect(offset).to eq(0.0)
-          expect(start_point).to eq([1.0, 0.5, 1.0])
-          expect(eps).to eq(1e-6)
-          expect(max_iter).to eq(1e6)
-        end
-      end
-
-      context "using deviance function instead of REML" do
-        subject(:model_fit) do
-          LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age, :Species], 
-                        random_effects: [[:intercept, :Age]], grouping: [:Location], reml: false,
-                        data: Daru::DataFrame.from_csv("spec/data/alien_species.csv"))
         end
 
         # compare the obtained estimates to the ones obtained for the same data 
         # by the function lmer from the package lme4 in R:
         #
-        #  > mod <- lmer("Aggression~Age+Species+(Age|Location)", data=alien.species, REML=FALSE)
-        #  > deviance(mod)
-        #  [1] 337.5662
-        #  > fixef(mod)
-        #          (Intercept)                 Age        SpeciesHuman          SpeciesOod SpeciesWeepingAngel 
-        #        1016.28645465         -0.06531612       -499.69371063       -899.56876058       -199.58889858 
-        #  > ranef(mod)
-        #  $Location
-        #            (Intercept)         Age
-        #  Asylum     -116.68051 -0.03353435
-        #  Earth        83.86296 -0.13612453
-        #  OodSphere    32.81756  0.16965888
-        #  > sigma(mod)
-        #  [1] 0.9588506
-
-        it "finds the minimal deviance correctly" do
-          expect(model_fit.deviance).to be_within(1e-4).of(337.5662)
-        end
-
-        it "estimates the residual standard deviation correctly" do
-          expect(model_fit.sigma).to be_within(1e-4).of(0.9588)
-        end
-
-        it "estimates the fixed effects terms correctly" do
-          fix_ef_from_R = [1016.2864, -0.06531, -499.6937, -899.5688, -199.5889] 
-          model_fit.fix_ef.values.each_with_index do |e, i|
-            expect(e).to be_within(1e-4).of(fix_ef_from_R[i])
-          end
-        end
-
-        it "estimates the random effects terms correctly" do
-          ran_ef_from_R = [-116.6805, -0.0335, 83.8630, -0.1361, 32.8176, 0.1697] 
-          model_fit.ran_ef.values.each_with_index do |e, i|
-            expect(e).to be_within(1e-4).of(ran_ef_from_R[i])
-          end
-        end
-      end
-    end
-
-    #############################################################################
-    # Test various non-constructor LMM methods for fits from a data frame
-    #############################################################################
-
-    describe "Various LMM methods applied to a #from_formula model fit" do
-      subject(:model_fit) do
-        LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)",
-                         data: Daru::DataFrame.from_csv("spec/data/alien_species.csv"))
-      end
-
-      # compare the obtained estimates to the ones obtained for the same data 
-      # by the function lmer from the package lme4 in R:
-      #
-      #  > mod <- lmer(Aggression~Age+Species+(Age|Location), data=alien.species)
-      #  
-      #  # predictions
-      #  > newdata <- read.table("alien_species_newdata.csv",sep=",", header=T)
-      #  > predict(mod, newdata)
-      #            1           2           3           4           5           6           7           8           9          10 
-      #  1070.912575  182.452063  -17.064468  384.788159  876.124072  674.711338 1092.698558  871.150884  687.462998   -4.016258 
-      #  > pred <- predict(mod, newdata, re.form=NA)
-      #  > pred
-      #          1         2         3         4         5         6         7         8         9        10 
-      #  1002.6356  110.8389  105.4177  506.5997  800.0421  799.9768 1013.8700  807.1616  808.4026  114.0394 
-      #
-      #  # confidence intervals for the predictions
-      #  > newdata$Aggression <- 0 
-      #  > m <- model.matrix(terms(mod), newdata)
-      #  > pred.stdev <- sqrt(diag(m %*% tcrossprod(vcov(mod),m)))
-      #  # lower bounds of 88% CI
-      #  > pred - qnorm(1-0.06) * pred.stdev
-      #          1         2         3         4         5         6         7         8         9        10 
-      #  906.32839  17.21062  10.21883 411.90672 701.96039 701.85218 920.50198 712.62678 714.24725  20.67199 
-      #  # upper bounds of 88% CI
-      #  > pred + qnorm(1-0.06) * pred.stdev
-      #          1         2         3         4         5         6         7         8         9        10 
-      #  1098.9429  204.4673  200.6166  601.2926  898.1239  898.1015 1107.2381  901.6964  902.5580  207.4069 
-      #
-      #  # prediction intervals
-      #
-      #  # standard deviations of the fixed effects estimates
-      #  > sqrt(diag(vcov(mod)))
-      #  [1] 60.15942377  0.08987599  0.26825658  0.28145153  0.27578794
-      #
-      #  # covariance matrix of the random effects coefficient estimates
-      #  > vcov(mod)
-      #  5 x 5 Matrix of class "dpoMatrix"
-      #                        (Intercept)           Age  SpeciesHuman    SpeciesOod SpeciesWeepingAngel
-      #  (Intercept)         3619.15626823 -3.231326e-01 -2.558786e-02 -2.882389e-02       -3.208552e-02
-      #  Age                   -0.32313265  8.077694e-03 -4.303052e-05 -3.332581e-05        4.757580e-06
-      #  SpeciesHuman          -0.02558786 -4.303052e-05  7.196159e-02  3.351678e-02        3.061001e-02
-      #  SpeciesOod            -0.02882389 -3.332581e-05  3.351678e-02  7.921496e-02        3.165401e-02
-      #  SpeciesWeepingAngel   -0.03208552  4.757580e-06  3.061001e-02  3.165401e-02        7.605899e-02
-      #
-      #  # conditional covariance matrix of the random effects estimates
-      #  > re <- ranef(mod, condVar=TRUE)
-      #  > m <- attr(re[[1]], which='postVar')
-      #  > bdiag(m[,,1],m[,,2],m[,,3])
-      #    6 x 6 sparse Matrix of class "dgCMatrix"
-      #                                                                              
-      #    [1,]  0.1098433621 -5.462386e-04  .             .             .             .           
-      #    [2,] -0.0005462386  3.465442e-06  .             .             .             .           
-      #    [3,]  .             .             0.1872216782 -8.651231e-04  .             .           
-      #    [4,]  .             .            -0.0008651231  4.845105e-06  .             .           
-      #    [5,]  .             .             .             .             0.1481118862 -7.468634e-04
-      #    [6,]  .             .             .             .            -0.0007468634  4.748243e-06
-      #
-      #  # Wald Z-test for fixed effects coefficients
-      #  > vc = vcov(mod)
-      #  > z = fixef(mod) / sqrt(diag(vc))
-      #  > z
-      #          (Intercept)                 Age        SpeciesHuman          SpeciesOod SpeciesWeepingAngel 
-      #           16.8932256          -0.7267364       -1862.7453318       -3196.1784666        -723.7044506 
-      #  > pval = 2*(1-pnorm(abs(z)))
-      #  > pval
-      #          (Intercept)                 Age        SpeciesHuman          SpeciesOod SpeciesWeepingAngel 
-      #            0.0000000           0.4673875           0.0000000           0.0000000           0.0000000
-      #
-      #  # Confidence intervals for fixed effects coefficients
-      #  > confint(mod, method="Wald")
-      #                             2.5 %       97.5 %
-      #  (Intercept)          898.3764163 1134.1970241
-      #  Age                   -0.2414699    0.1108376
-      #  SpeciesHuman        -500.2194685 -499.1679220
-      #  SpeciesOod          -900.1209556 -899.0176859
-      #  SpeciesWeepingAngel -200.1294926 -199.0484237
-
-      describe "#predict" do
-        context "with Daru::DataFrame new data input" do
-          let(:newdata) { Daru::DataFrame.from_csv("spec/data/alien_species_newdata.csv") }
-
-          it "computes correct predictions when with_ran_ef is true"do
-            result_from_R = [1070.912575, 182.452063, -17.064468, 384.788159, 876.124072, 
-                             674.711338, 1092.698558, 871.150884, 687.462998, -4.016258]
-            predictions = model_fit.predict(newdata: newdata, with_ran_ef: true)
-            predictions.each_with_index { |p,i| expect(p).to be_within(1e-4).of(result_from_R[i]) }
-          end
-
-          it "computes correct predictions when with_ran_ef is false"do
-            result_from_R = [1002.6356, 110.8389, 105.4177, 506.5997, 800.0421, 
-                             799.9768, 1013.8700, 807.1616, 808.4026, 114.0394]
-            predictions = model_fit.predict(newdata: newdata, with_ran_ef: false)
-            predictions.each_with_index { |p,i| expect(p).to be_within(1e-4).of(result_from_R[i]) }
-          end
-        end
-      end
-
-      describe "#predict_with_intervals" do
-        context "with DaruDataFrame newdata" do
-          context "using type: :confidence" do
-            let(:newdata) { Daru::DataFrame.from_csv("spec/data/alien_species_newdata.csv") }
-
-            it "computes confidence intervals for predictions correctly" do
-              lower88_from_R = [906.32839, 17.21062, 10.21883,411.90672,701.96039,701.85218,920.50198,712.62678,714.24725, 20.67199] 
-              upper88_from_R = [1098.9429, 204.4673, 200.6166, 601.2926, 898.1239, 898.1015,1107.2381, 901.6964, 902.5580, 207.4069]
-              result = model_fit.predict_with_intervals(newdata: newdata, level: 0.88, type: :confidence)
-              result[:lower88].each_with_index { |l,i| expect(l/lower88_from_R[i]).to be_within(1e-2).of(1.0) }
-              result[:upper88].each_with_index { |u,i| expect(u/upper88_from_R[i]).to be_within(1e-2).of(1.0) }
-            end
-            
-            # a unit test for prediction intervals is implemented form raw model matrices below
-          end
-        end
-      end
-
-      describe "#fix_ef_sd" do
-        it "computes the standard deviations of the fixed effects coefficients correctly" do
-          result_from_R = [60.15942377, 0.08987599, 0.26825658, 0.28145153, 0.27578794]
-          result = model_fit.fix_ef_sd.values
-          result.each_index { |i| expect(result[i]/result_from_R[i]).to be_within(1e-2).of(1.0) }
-        end
-      end
-
-      describe "#fix_ef_cov_mat" do
-        it "computes the covariance matrix of the fixed effects coefficients correctly" do
-          result_from_R = [3619.15626823, -3.231326e-01, -2.558786e-02, -2.882389e-02, -3.208552e-02, -0.32313265, 8.077694e-03, -4.303052e-05, -3.332581e-05, 4.757580e-06, -0.02558786, -4.303052e-05, 7.196159e-02, 3.351678e-02, 3.061001e-02, -0.02882389, -3.332581e-05, 3.351678e-02, 7.921496e-02, 3.165401e-02, -0.03208552, 4.757580e-06, 3.061001e-02, 3.165401e-02, 7.605899e-02]
-          result = model_fit.fix_ef_cov_mat.to_flat_a
-          result.each_index { |i| expect(result[i]/result_from_R[i]).to be_within(1e-2).of(1.0) }
-        end
-      end
-
-      describe "#cond_cov_mat_ran_ef" do
-        it "computes the conditional covariance matrix of " +
-           "the random effects coefficient estimates correstly" do
-          result_from_R = [0.1098433621, -5.462386e-04, 0.0, 0.0, 0.0, 0.0, -0.0005462386, 3.465442e-06, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1872216782, -8.651231e-04, 0.0, 0.0, 0.0, 0.0, -0.0008651231, 4.845105e-06, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1481118862, -7.468634e-04, 0.0, 0.0, 0.0, 0.0, -0.0007468634, 4.748243e-06]
-          result = model_fit.cond_cov_mat_ran_ef.to_flat_a
-          result.each_index do |i| 
-            if result_from_R[i] == 0 then
-              expect(result[i]).to eq(0)
-            else
-              expect(result[i]/result_from_R[i]).to be_within(1e-2).of(1.0)
-            end
-          end
-        end
-      end
-
-      describe "#fix_ef_z" do
-        it "computes the Wald z statistics correctly" do
-          result_from_R = [16.8932256, -0.7267364, -1862.7453318, -3196.1784666, -723.7044506]
-          result = model_fit.fix_ef_z.values
-          result.each_index { |k| expect(result[k]/result_from_R[k]).to be_within(1e-3).of(1.0) }
-        end
-      end
-
-      describe "#fix_ef_p" do
-        context "with method: :wald" do
-          it "computes the p-values from the Wald test correctly" do
-            result_from_R = [0.0, 0.4673875, 0.0, 0.0, 0.0]
-            result = model_fit.fix_ef_p(method: :wald).values
-            result.each_index do |k| 
-              if result_from_R[k] == 0 then
-                expect(result[k]).to eq(0)
-              else
-                expect(result[k]/result_from_R[k]).to be_within(1e-4).of(1.0)
-              end
-            end
-          end
-        end
-      end
-
-      describe "#fix_ef_conf_int" do
-        context "with method: :wald" do
-          it "computes 95% confidence intervals for the fixed effects correctly" do
-            result_from_R = [ [898.3764163, 1134.1970241], [-0.2414699, 0.1108376], 
-                              [-500.2194685, -499.1679220], [-900.1209556, -899.0176859],
-                              [-200.1294926, -199.0484237] ]
-            result = model_fit.fix_ef_conf_int(level: 0.95, method: :wald).values
-            result.each_index do |k| 
-              expect(result[k][0]/result_from_R[k][0]).to be_within(1e-3).of(1.0)
-              expect(result[k][1]/result_from_R[k][1]).to be_within(1e-3).of(1.0)
-            end
-          end
-        end
-
-        context "with method: :bootstrap" do
-          [:normal, :basic, :studentized, :percentile].each do |boottype|
-            context "with boottype: #{boottype}" do
-              let(:ci) { model_fit.fix_ef_conf_int(method: :bootstrap, boottype: boottype, nsim: 5) }
-
-              it "computes a confidence interval for each fixed effects coefficient" do
-                model_fit.fix_ef.each_key do |key|
-                  expect(ci[key].is_a?(Array)).to be_truthy
-                end
-              end
-
-              it "computes confidence intervals of positive length" do
-                model_fit.fix_ef.each_key do |key|
-                  expect(ci[key][1] - ci[key][0] > 0).to be_truthy
-                end
-              end
-            end
-          end
-        end
-
-        context "with method: :all" do
-          let(:ci) { model_fit.fix_ef_conf_int(method: :all, nsim: 50) }
-
-          it "returns a Daru::DataFrame" do
-            expect(ci.is_a?(Daru::DataFrame)).to be_truthy
-          end
-
-          it "returns a Daru::DataFrame containing Arrays of two Floats in each entry" do
-            ci.each_vector do |v|
-              v.each do |e|
-                expect(e.is_a?(Array)).to be_truthy
-                expect(e.length).to eq(2)
-                expect(e[0].is_a?(Float)).to be_truthy
-                expect(e[1].is_a?(Float)).to be_truthy
-              end
-            end
-          end
-        end
-      end
-
-      describe "#refit" do
-        let(:new_model) do
-          model_fit.refit(newdata: Daru::DataFrame.from_csv("spec/data/alien_species_refit.csv"))
-        end
-
-        # compare the obtained estimates to the ones obtained for the same data 
-        # by the function lmer from the package lme4 in R:
-        #
-        #  > mod <- lmer(Aggression ~ Age + Species + (Age | Location), data=df1)
-        #  > REMLcrit(mod)
-        #  [1] 363.913
-        #  > fixef(mod)
-        #          (Intercept)                 Age        SpeciesHuman 
-        #           833.686766            2.329822         -400.714091 
-        #           SpeciesOod SpeciesWeepingAngel 
-        #          -838.990305          -99.530996 
-        #  > ranef(mod)
-        #  $Location
-        #            (Intercept)        Age
-        #  Asylum     -132.75250  0.1874363
-        #  Earth       166.43088 -1.3432293
-        #  OodSphere   -33.67838  1.1557931
-        #
-        #  > sigma(mod)
-        #  [1] 7.535235
-
-        it "finds the minimal REML deviance correctly" do
-          expect(new_model.deviance).to be_within(1e-3).of(363.913)
-        end
-
-        it "estimates the residual standard deviation correctly" do
-          expect(new_model.sigma).to be_within(1e-4).of(7.535235)
-        end
-
-        it "estimates the fixed effects terms correctly" do
-          fix_ef_from_R = [833.686766, 2.329822, -400.714091, -838.990305, -99.530996] 
-          new_model.fix_ef.values.each_with_index do |e, i|
-            expect(e).to be_within(1e-4).of(fix_ef_from_R[i])
-          end
-        end
-
-        it "estimates the random effects terms correctly" do
-          ran_ef_from_R = [-132.75250, 0.1874363, 166.43088, -1.3432293, -33.67838, 1.1557931]
-          new_model.ran_ef.values.each_with_index do |e, i|
-            expect(e).to be_within(1e-4).of(ran_ef_from_R[i])
-          end
-        end
-
-        it "names the fixed effects correctly" do
-          fix_ef_names = [:intercept, :Age, :Species_lvl_Human, :Species_lvl_Ood, :Species_lvl_WeepingAngel]
-          expect(new_model.fix_ef.keys).to eq(fix_ef_names)
-        end
-
-        it "names the random effects correctly" do
-          ran_ef_names = [:intercept_Asylum, :Age_Asylum, :intercept_Earth, 
-                          :Age_Earth, :intercept_OodSphere, :Age_OodSphere]
-          expect(new_model.ran_ef.keys).to eq(ran_ef_names)
-        end
-      end
-
-      describe "#simulate_new_response" do
-        context "with type: :parametric" do
-          let(:new_response) { model_fit.simulate_new_response(type: :parametric) }
-
-          it "generates an Array" do
-            expect(new_response.is_a?(Array)).to be_truthy
-          end
-
-          it "gives an Array of the correct length" do
-            expect(new_response.length).to eq(model_fit.model_data.n)
-          end
-
-          it "gives an Array of Floats" do
-            expect(new_response.all?{|y| y.is_a?(Float)}).to be_truthy
-          end
-        end
-      end
-    end
-
-    describe "Various LMM methods applied to a #from_daru model fit" do
-      subject(:model_fit) do
-        LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age, :Species], 
-                      random_effects: [[:intercept, :Age]], grouping: [:Location], reml: true,
-                      data: Daru::DataFrame.from_csv("spec/data/alien_species.csv"))
-      end
-
-      # compare the obtained estimates to the ones obtained for the same data 
-      # by the function lmer from the package lme4 in R:
-      #
-      # Same as using #from_formula
-      #
-
-      describe "#predict" do
-        context "with Daru::DataFrame new data input" do
-          let(:newdata) { Daru::DataFrame.from_csv("spec/data/alien_species_newdata.csv") }
-
-          it "computes correct predictions when with_ran_ef is true"do
-            result_from_R = [1070.912575, 182.452063, -17.064468, 384.788159, 876.124072, 
-                             674.711338, 1092.698558, 871.150884, 687.462998, -4.016258]
-            predictions = model_fit.predict(newdata: newdata, with_ran_ef: true)
-            predictions.each_with_index { |p,i| expect(p).to be_within(1e-4).of(result_from_R[i]) }
-          end
-
-          it "computes correct predictions when with_ran_ef is false"do
-            result_from_R = [1002.6356, 110.8389, 105.4177, 506.5997, 800.0421, 
-                             799.9768, 1013.8700, 807.1616, 808.4026, 114.0394]
-            predictions = model_fit.predict(newdata: newdata, with_ran_ef: false)
-            predictions.each_with_index { |p,i| expect(p).to be_within(1e-4).of(result_from_R[i]) }
-          end
-        end
-      end
-
-      describe "#predict_with_intervals" do
-        context "with DaruDataFrame newdata" do
-          context "using type: :confidence" do
-            let(:newdata) { Daru::DataFrame.from_csv("spec/data/alien_species_newdata.csv") }
-
-            it "computes confidence intervals for predictions correctly" do
-              lower88_from_R = [906.32839, 17.21062, 10.21883,411.90672,701.96039,701.85218,920.50198,712.62678,714.24725, 20.67199] 
-              upper88_from_R = [1098.9429, 204.4673, 200.6166, 601.2926, 898.1239, 898.1015,1107.2381, 901.6964, 902.5580, 207.4069]
-              result = model_fit.predict_with_intervals(newdata: newdata, level: 0.88, type: :confidence)
-              result[:lower88].each_with_index { |l,i| expect(l/lower88_from_R[i]).to be_within(1e-2).of(1.0) }
-              result[:upper88].each_with_index { |u,i| expect(u/upper88_from_R[i]).to be_within(1e-2).of(1.0) }
-            end
-            
-            # a unit test for prediction intervals is implemented form raw model matrices below
-          end
-        end
-      end
-
-      describe "#fix_ef_sd" do
-        it "computes the standard deviations of the fixed effects coefficients correctly" do
-          result_from_R = [60.15942377, 0.08987599, 0.26825658, 0.28145153, 0.27578794]
-          result = model_fit.fix_ef_sd.values
-          result.each_index { |i| expect(result[i]/result_from_R[i]).to be_within(1e-2).of(1.0) }
-        end
-      end
-
-      describe "#fix_ef_cov_mat" do
-        it "computes the covariance matrix of the fixed effects coefficients correctly" do
-          result_from_R = [3619.15626823, -3.231326e-01, -2.558786e-02, -2.882389e-02, -3.208552e-02, -0.32313265, 8.077694e-03, -4.303052e-05, -3.332581e-05, 4.757580e-06, -0.02558786, -4.303052e-05, 7.196159e-02, 3.351678e-02, 3.061001e-02, -0.02882389, -3.332581e-05, 3.351678e-02, 7.921496e-02, 3.165401e-02, -0.03208552, 4.757580e-06, 3.061001e-02, 3.165401e-02, 7.605899e-02]
-          result = model_fit.fix_ef_cov_mat.to_flat_a
-          result.each_index { |i| expect(result[i]/result_from_R[i]).to be_within(1e-2).of(1.0) }
-        end
-      end
-
-      describe "#cond_cov_mat_ran_ef" do
-        it "computes the conditional covariance matrix of " +
-           "the random effects coefficient estimates correstly" do
-          result_from_R = [0.1098433621, -5.462386e-04, 0.0, 0.0, 0.0, 0.0, -0.0005462386, 3.465442e-06, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1872216782, -8.651231e-04, 0.0, 0.0, 0.0, 0.0, -0.0008651231, 4.845105e-06, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1481118862, -7.468634e-04, 0.0, 0.0, 0.0, 0.0, -0.0007468634, 4.748243e-06]
-          result = model_fit.cond_cov_mat_ran_ef.to_flat_a
-          result.each_index do |i| 
-            if result_from_R[i] == 0 then
-              expect(result[i]).to eq(0)
-            else
-              expect(result[i]/result_from_R[i]).to be_within(1e-2).of(1.0)
-            end
-          end
-        end
-      end
-
-      describe "#fix_ef_z" do
-        it "computes the Wald z statistics correctly" do
-          result_from_R = [16.8932256, -0.7267364, -1862.7453318, -3196.1784666, -723.7044506]
-          result = model_fit.fix_ef_z.values
-          result.each_index { |k| expect(result[k]/result_from_R[k]).to be_within(1e-3).of(1.0) }
-        end
-      end
-
-      describe "#fix_ef_p" do
-        context "with method: :wald" do
-          it "computes the p-values from the Wald test correctly" do
-            result_from_R = [0.0, 0.4673875, 0.0, 0.0, 0.0]
-            result = model_fit.fix_ef_p(method: :wald).values
-            result.each_index do |k| 
-              if result_from_R[k] == 0 then
-                expect(result[k]).to eq(0)
-              else
-                expect(result[k]/result_from_R[k]).to be_within(1e-4).of(1.0)
-              end
-            end
-          end
-        end
-      end
-
-      describe "#fix_ef_conf_int" do
-        context "with method: :wald" do
-          it "computes 95% confidence intervals for the fixed effects correctly" do
-            result_from_R = [ [898.3764163, 1134.1970241], [-0.2414699, 0.1108376], 
-                              [-500.2194685, -499.1679220], [-900.1209556, -899.0176859],
-                              [-200.1294926, -199.0484237] ]
-            result = model_fit.fix_ef_conf_int(level: 0.95, method: :wald).values
-            result.each_index do |k| 
-              expect(result[k][0]/result_from_R[k][0]).to be_within(1e-3).of(1.0)
-              expect(result[k][1]/result_from_R[k][1]).to be_within(1e-3).of(1.0)
-            end
-          end
-        end
-
-        context "with method: :bootstrap" do
-          [:normal, :basic, :studentized, :percentile].each do |boottype|
-            context "with boottype: #{boottype}" do
-              let(:ci) { model_fit.fix_ef_conf_int(method: :bootstrap, boottype: boottype, nsim: 5) }
-
-              it "computes a confidence interval for each fixed effects coefficient" do
-                model_fit.fix_ef.each_key do |key|
-                  expect(ci[key].is_a?(Array)).to be_truthy
-                end
-              end
-
-              it "computes confidence intervals of positive length" do
-                model_fit.fix_ef.each_key do |key|
-                  expect(ci[key][1] - ci[key][0] > 0).to be_truthy
-                end
-              end
-            end
-          end
-        end
-
-        context "with method: :all" do
-          let(:ci) { model_fit.fix_ef_conf_int(method: :all, nsim: 50) }
-
-          it "returns a Daru::DataFrame" do
-            expect(ci.is_a?(Daru::DataFrame)).to be_truthy
-          end
-
-          it "returns a Daru::DataFrame containing Arrays of two Floats in each entry" do
-            ci.each_vector do |v|
-              v.each do |e|
-                expect(e.is_a?(Array)).to be_truthy
-                expect(e.length).to eq(2)
-                expect(e[0].is_a?(Float)).to be_truthy
-                expect(e[1].is_a?(Float)).to be_truthy
-              end
-            end
-          end
-        end
-      end
-
-      describe "#refit" do
-        let(:new_model) do
-          model_fit.refit(newdata: Daru::DataFrame.from_csv("spec/data/alien_species_refit.csv"))
-        end
-
-        # compare the obtained estimates to the ones obtained for the same data 
-        # by the function lmer from the package lme4 in R:
-        #
-        #  > mod <- lmer(Aggression ~ Age + Species + (Age | Location), data=df1)
-        #  > REMLcrit(mod)
-        #  [1] 363.913
-        #  > fixef(mod)
-        #          (Intercept)                 Age        SpeciesHuman 
-        #           833.686766            2.329822         -400.714091 
-        #           SpeciesOod SpeciesWeepingAngel 
-        #          -838.990305          -99.530996 
-        #  > ranef(mod)
-        #  $Location
-        #            (Intercept)        Age
-        #  Asylum     -132.75250  0.1874363
-        #  Earth       166.43088 -1.3432293
-        #  OodSphere   -33.67838  1.1557931
-        #
-        #  > sigma(mod)
-        #  [1] 7.535235
-
-        it "finds the minimal REML deviance correctly" do
-          expect(new_model.deviance).to be_within(1e-3).of(363.913)
-        end
-
-        it "estimates the residual standard deviation correctly" do
-          expect(new_model.sigma).to be_within(1e-4).of(7.535235)
-        end
-
-        it "estimates the fixed effects terms correctly" do
-          fix_ef_from_R = [833.686766, 2.329822, -400.714091, -838.990305, -99.530996] 
-          new_model.fix_ef.values.each_with_index do |e, i|
-            expect(e).to be_within(1e-4).of(fix_ef_from_R[i])
-          end
-        end
-
-        it "estimates the random effects terms correctly" do
-          ran_ef_from_R = [-132.75250, 0.1874363, 166.43088, -1.3432293, -33.67838, 1.1557931]
-          new_model.ran_ef.values.each_with_index do |e, i|
-            expect(e).to be_within(1e-4).of(ran_ef_from_R[i])
-          end
-        end
-
-        it "names the fixed effects correctly" do
-          fix_ef_names = [:intercept, :Age, :Species_lvl_Human, :Species_lvl_Ood, :Species_lvl_WeepingAngel]
-          expect(new_model.fix_ef.keys).to eq(fix_ef_names)
-        end
-
-        it "names the random effects correctly" do
-          ran_ef_names = [:intercept_Asylum, :Age_Asylum, :intercept_Earth, 
-                          :Age_Earth, :intercept_OodSphere, :Age_OodSphere]
-          expect(new_model.ran_ef.keys).to eq(ran_ef_names)
-        end
-      end
-
-      describe "#simulate_new_response" do
-        context "with type: :parametric" do
-          let(:new_response) { model_fit.simulate_new_response(type: :parametric) }
-
-          it "generates an Array" do
-            expect(new_response.is_a?(Array)).to be_truthy
-          end
-
-          it "gives an Array of the correct length" do
-            expect(new_response.length).to eq(model_fit.model_data.n)
-          end
-
-          it "gives an Array of Floats" do
-            expect(new_response.all?{|y| y.is_a?(Float)}).to be_truthy
-          end
-        end
-      end
-
-      describe "#drop" do
-        let(:new_model) { model_fit.drop(:Species) }
-
-        # Compare to the results obtained in R vie lme4:
-        #
-        #  > mod <- lmer(Aggression ~ Age + (Age | Location), data=df)
-        #  Warning message:
-        #  In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
-        #    Model is nearly unidentifiable: very large eigenvalue
-        #   - Rescale variables?
-        #  > REMLcrit(mod)
-        #  [1] 1440.306
-        #  > fixef(mod)
-        #  (Intercept)         Age 
-        #   725.645778   -0.631179 
+        #  > mod <- lmer(Aggression~Age+Species+(Age|Location), data=alien.species)
         #  
-        #  > sigma(mod)
-        #  [1] 335.1927
+        #  # predictions
+        #  > newdata <- read.table("alien_species_newdata.csv",sep=",", header=T)
+        #  > predict(mod, newdata)
+        #            1           2           3           4           5           6           7           8           9          10 
+        #  1070.912575  182.452063  -17.064468  384.788159  876.124072  674.711338 1092.698558  871.150884  687.462998   -4.016258 
+        #  > pred <- predict(mod, newdata, re.form=NA)
+        #  > pred
+        #          1         2         3         4         5         6         7         8         9        10 
+        #  1002.6356  110.8389  105.4177  506.5997  800.0421  799.9768 1013.8700  807.1616  808.4026  114.0394 
         #
+        #  # confidence intervals for the predictions
+        #  > newdata$Aggression <- 0 
+        #  > m <- model.matrix(terms(mod), newdata)
+        #  > pred.stdev <- sqrt(diag(m %*% tcrossprod(vcov(mod),m)))
+        #  # lower bounds of 88% CI
+        #  > pred - qnorm(1-0.06) * pred.stdev
+        #          1         2         3         4         5         6         7         8         9        10 
+        #  906.32839  17.21062  10.21883 411.90672 701.96039 701.85218 920.50198 712.62678 714.24725  20.67199 
+        #  # upper bounds of 88% CI
+        #  > pred + qnorm(1-0.06) * pred.stdev
+        #          1         2         3         4         5         6         7         8         9        10 
+        #  1098.9429  204.4673  200.6166  601.2926  898.1239  898.1015 1107.2381  901.6964  902.5580  207.4069 
+        #
+        #  # prediction intervals
+        #
+        #  # standard deviations of the fixed effects estimates
+        #  > sqrt(diag(vcov(mod)))
+        #  [1] 60.15942377  0.08987599  0.26825658  0.28145153  0.27578794
+        #
+        #  # covariance matrix of the random effects coefficient estimates
+        #  > vcov(mod)
+        #  5 x 5 Matrix of class "dpoMatrix"
+        #                        (Intercept)           Age  SpeciesHuman    SpeciesOod SpeciesWeepingAngel
+        #  (Intercept)         3619.15626823 -3.231326e-01 -2.558786e-02 -2.882389e-02       -3.208552e-02
+        #  Age                   -0.32313265  8.077694e-03 -4.303052e-05 -3.332581e-05        4.757580e-06
+        #  SpeciesHuman          -0.02558786 -4.303052e-05  7.196159e-02  3.351678e-02        3.061001e-02
+        #  SpeciesOod            -0.02882389 -3.332581e-05  3.351678e-02  7.921496e-02        3.165401e-02
+        #  SpeciesWeepingAngel   -0.03208552  4.757580e-06  3.061001e-02  3.165401e-02        7.605899e-02
+        #
+        #  # conditional covariance matrix of the random effects estimates
+        #  > re <- ranef(mod, condVar=TRUE)
+        #  > m <- attr(re[[1]], which='postVar')
+        #  > bdiag(m[,,1],m[,,2],m[,,3])
+        #    6 x 6 sparse Matrix of class "dgCMatrix"
+        #                                                                              
+        #    [1,]  0.1098433621 -5.462386e-04  .             .             .             .           
+        #    [2,] -0.0005462386  3.465442e-06  .             .             .             .           
+        #    [3,]  .             .             0.1872216782 -8.651231e-04  .             .           
+        #    [4,]  .             .            -0.0008651231  4.845105e-06  .             .           
+        #    [5,]  .             .             .             .             0.1481118862 -7.468634e-04
+        #    [6,]  .             .             .             .            -0.0007468634  4.748243e-06
+        #
+        #  # Wald Z-test for fixed effects coefficients
+        #  > vc = vcov(mod)
+        #  > z = fixef(mod) / sqrt(diag(vc))
+        #  > z
+        #          (Intercept)                 Age        SpeciesHuman          SpeciesOod SpeciesWeepingAngel 
+        #           16.8932256          -0.7267364       -1862.7453318       -3196.1784666        -723.7044506 
+        #  > pval = 2*(1-pnorm(abs(z)))
+        #  > pval
+        #          (Intercept)                 Age        SpeciesHuman          SpeciesOod SpeciesWeepingAngel 
+        #            0.0000000           0.4673875           0.0000000           0.0000000           0.0000000
+        #
+        #  # Confidence intervals for fixed effects coefficients
+        #  > confint(mod, method="Wald")
+        #                             2.5 %       97.5 %
+        #  (Intercept)          898.3764163 1134.1970241
+        #  Age                   -0.2414699    0.1108376
+        #  SpeciesHuman        -500.2194685 -499.1679220
+        #  SpeciesOod          -900.1209556 -899.0176859
+        #  SpeciesWeepingAngel -200.1294926 -199.0484237
 
-        it "finds the minimal REML deviance correctly" do
-          expect(new_model.deviance).to be_within(1e-3).of(1440.306)
-        end
+        describe "#predict" do
+          context "with Daru::DataFrame new data input" do
+            let(:newdata) { Daru::DataFrame.from_csv("spec/data/alien_species_newdata.csv") }
 
-        it "estimates the residual standard deviation correctly" do
-          expect(new_model.sigma).to be_within(1e-2).of(335.1927)
-        end
+            it "computes correct predictions when with_ran_ef is true"do
+              result_from_R = [1070.912575, 182.452063, -17.064468, 384.788159, 876.124072, 
+                               674.711338, 1092.698558, 871.150884, 687.462998, -4.016258]
+              predictions = model_fit.predict(newdata: newdata, with_ran_ef: true)
+              predictions.each_with_index { |p,i| expect(p).to be_within(1e-4).of(result_from_R[i]) }
+            end
 
-        it "estimates the fixed effects terms correctly" do
-          fix_ef_from_R = [725.645778, -0.631179] 
-          new_model.fix_ef.values.each_with_index do |e, i|
-            expect(e).to be_within(0.1).of(fix_ef_from_R[i])
+            it "computes correct predictions when with_ran_ef is false"do
+              result_from_R = [1002.6356, 110.8389, 105.4177, 506.5997, 800.0421, 
+                               799.9768, 1013.8700, 807.1616, 808.4026, 114.0394]
+              predictions = model_fit.predict(newdata: newdata, with_ran_ef: false)
+              predictions.each_with_index { |p,i| expect(p).to be_within(1e-4).of(result_from_R[i]) }
+            end
           end
         end
 
-        it "names the fixed effects correctly" do
-          fix_ef_names = [:intercept, :Age]
-          expect(new_model.fix_ef.keys).to eq(fix_ef_names)
+        describe "#predict_with_intervals" do
+          context "with DaruDataFrame newdata" do
+            context "using type: :confidence" do
+              let(:newdata) { Daru::DataFrame.from_csv("spec/data/alien_species_newdata.csv") }
+
+              it "computes confidence intervals for predictions correctly" do
+                lower88_from_R = [906.32839, 17.21062, 10.21883,411.90672,701.96039,701.85218,920.50198,712.62678,714.24725, 20.67199] 
+                upper88_from_R = [1098.9429, 204.4673, 200.6166, 601.2926, 898.1239, 898.1015,1107.2381, 901.6964, 902.5580, 207.4069]
+                result = model_fit.predict_with_intervals(newdata: newdata, level: 0.88, type: :confidence)
+                result[:lower88].each_with_index { |l,i| expect(l/lower88_from_R[i]).to be_within(1e-2).of(1.0) }
+                result[:upper88].each_with_index { |u,i| expect(u/upper88_from_R[i]).to be_within(1e-2).of(1.0) }
+              end
+              
+              # a unit test for prediction intervals is implemented form raw model matrices below
+            end
+          end
         end
 
-        it "names the random effects correctly" do
-          ran_ef_names = [:intercept_Asylum, :Age_Asylum, :intercept_Earth, 
-                          :Age_Earth, :intercept_OodSphere, :Age_OodSphere]
-          expect(new_model.ran_ef.keys).to eq(ran_ef_names)
+        describe "#fix_ef_sd" do
+          it "computes the standard deviations of the fixed effects coefficients correctly" do
+            result_from_R = [60.15942377, 0.08987599, 0.26825658, 0.28145153, 0.27578794]
+            result = model_fit.fix_ef_sd.values
+            result.each_index { |i| expect(result[i]/result_from_R[i]).to be_within(1e-2).of(1.0) }
+          end
+        end
+
+        describe "#fix_ef_cov_mat" do
+          it "computes the covariance matrix of the fixed effects coefficients correctly" do
+            result_from_R = [3619.15626823, -3.231326e-01, -2.558786e-02, -2.882389e-02, -3.208552e-02, -0.32313265, 8.077694e-03, -4.303052e-05, -3.332581e-05, 4.757580e-06, -0.02558786, -4.303052e-05, 7.196159e-02, 3.351678e-02, 3.061001e-02, -0.02882389, -3.332581e-05, 3.351678e-02, 7.921496e-02, 3.165401e-02, -0.03208552, 4.757580e-06, 3.061001e-02, 3.165401e-02, 7.605899e-02]
+            result = model_fit.fix_ef_cov_mat.to_flat_a
+            result.each_index { |i| expect(result[i]/result_from_R[i]).to be_within(1e-2).of(1.0) }
+          end
+        end
+
+        describe "#cond_cov_mat_ran_ef" do
+          it "computes the conditional covariance matrix of " +
+             "the random effects coefficient estimates correstly" do
+            result_from_R = [0.1098433621, -5.462386e-04, 0.0, 0.0, 0.0, 0.0, -0.0005462386, 3.465442e-06, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1872216782, -8.651231e-04, 0.0, 0.0, 0.0, 0.0, -0.0008651231, 4.845105e-06, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.1481118862, -7.468634e-04, 0.0, 0.0, 0.0, 0.0, -0.0007468634, 4.748243e-06]
+            result = model_fit.cond_cov_mat_ran_ef.to_flat_a
+            result.each_index do |i| 
+              if result_from_R[i] == 0 then
+                expect(result[i]).to eq(0)
+              else
+                expect(result[i]/result_from_R[i]).to be_within(1e-2).of(1.0)
+              end
+            end
+          end
+        end
+
+        describe "#fix_ef_z" do
+          it "computes the Wald z statistics correctly" do
+            result_from_R = [16.8932256, -0.7267364, -1862.7453318, -3196.1784666, -723.7044506]
+            result = model_fit.fix_ef_z.values
+            result.each_index { |k| expect(result[k]/result_from_R[k]).to be_within(1e-3).of(1.0) }
+          end
+        end
+
+        describe "#fix_ef_p" do
+          context "with method: :wald" do
+            it "computes the p-values from the Wald test correctly" do
+              result_from_R = [0.0, 0.4673875, 0.0, 0.0, 0.0]
+              result = model_fit.fix_ef_p(method: :wald).values
+              result.each_index do |k| 
+                if result_from_R[k] == 0 then
+                  expect(result[k]).to eq(0)
+                else
+                  expect(result[k]/result_from_R[k]).to be_within(1e-4).of(1.0)
+                end
+              end
+            end
+          end
+        end
+
+        describe "#fix_ef_conf_int" do
+          context "with method: :wald" do
+            it "computes 95% confidence intervals for the fixed effects correctly" do
+              result_from_R = [ [898.3764163, 1134.1970241], [-0.2414699, 0.1108376], 
+                                [-500.2194685, -499.1679220], [-900.1209556, -899.0176859],
+                                [-200.1294926, -199.0484237] ]
+              result = model_fit.fix_ef_conf_int(level: 0.95, method: :wald).values
+              result.each_index do |k| 
+                expect(result[k][0]/result_from_R[k][0]).to be_within(1e-3).of(1.0)
+                expect(result[k][1]/result_from_R[k][1]).to be_within(1e-3).of(1.0)
+              end
+            end
+          end
+
+          context "with method: :bootstrap" do
+            [:normal, :basic, :studentized, :percentile].each do |boottype|
+              context "with boottype: #{boottype}" do
+                let(:ci) { model_fit.fix_ef_conf_int(method: :bootstrap, boottype: boottype, nsim: 5) }
+
+                it "computes a confidence interval for each fixed effects coefficient" do
+                  model_fit.fix_ef.each_key do |key|
+                    expect(ci[key].is_a?(Array)).to be_truthy
+                  end
+                end
+
+                it "computes confidence intervals of positive length" do
+                  model_fit.fix_ef.each_key do |key|
+                    expect(ci[key][1] - ci[key][0] > 0).to be_truthy
+                  end
+                end
+              end
+            end
+          end
+
+          context "with method: :all" do
+            let(:ci) { model_fit.fix_ef_conf_int(method: :all, nsim: 50) }
+
+            it "returns a Daru::DataFrame" do
+              expect(ci.is_a?(Daru::DataFrame)).to be_truthy
+            end
+
+            it "returns a Daru::DataFrame containing Arrays of two Floats in each entry" do
+              ci.each_vector do |v|
+                v.each do |e|
+                  expect(e.is_a?(Array)).to be_truthy
+                  expect(e.length).to eq(2)
+                  expect(e[0].is_a?(Float)).to be_truthy
+                  expect(e[1].is_a?(Float)).to be_truthy
+                end
+              end
+            end
+          end
+        end
+
+        describe "#refit" do
+          let(:new_model) do
+            model_fit.refit(newdata: Daru::DataFrame.from_csv("spec/data/alien_species_refit.csv"))
+          end
+
+          # compare the obtained estimates to the ones obtained for the same data 
+          # by the function lmer from the package lme4 in R:
+          #
+          #  > mod <- lmer(Aggression ~ Age + Species + (Age | Location), data=df1)
+          #  > REMLcrit(mod)
+          #  [1] 363.913
+          #  > fixef(mod)
+          #          (Intercept)                 Age        SpeciesHuman 
+          #           833.686766            2.329822         -400.714091 
+          #           SpeciesOod SpeciesWeepingAngel 
+          #          -838.990305          -99.530996 
+          #  > ranef(mod)
+          #  $Location
+          #            (Intercept)        Age
+          #  Asylum     -132.75250  0.1874363
+          #  Earth       166.43088 -1.3432293
+          #  OodSphere   -33.67838  1.1557931
+          #
+          #  > sigma(mod)
+          #  [1] 7.535235
+
+          it "finds the minimal REML deviance correctly" do
+            expect(new_model.deviance).to be_within(1e-3).of(363.913)
+          end
+
+          it "estimates the residual standard deviation correctly" do
+            expect(new_model.sigma).to be_within(1e-4).of(7.535235)
+          end
+
+          it "estimates the fixed effects terms correctly" do
+            fix_ef_from_R = [833.686766, 2.329822, -400.714091, -838.990305, -99.530996] 
+            new_model.fix_ef.values.each_with_index do |e, i|
+              expect(e).to be_within(1e-4).of(fix_ef_from_R[i])
+            end
+          end
+
+          it "estimates the random effects terms correctly" do
+            ran_ef_from_R = [-132.75250, 0.1874363, 166.43088, -1.3432293, -33.67838, 1.1557931]
+            new_model.ran_ef.values.each_with_index do |e, i|
+              expect(e).to be_within(1e-4).of(ran_ef_from_R[i])
+            end
+          end
+
+          it "names the fixed effects correctly" do
+            fix_ef_names = [:intercept, :Age, :Species_lvl_Human, :Species_lvl_Ood, :Species_lvl_WeepingAngel]
+            expect(new_model.fix_ef.keys).to eq(fix_ef_names)
+          end
+
+          it "names the random effects correctly" do
+            ran_ef_names = [:intercept_Asylum, :Age_Asylum, :intercept_Earth, 
+                            :Age_Earth, :intercept_OodSphere, :Age_OodSphere]
+            expect(new_model.ran_ef.keys).to eq(ran_ef_names)
+          end
+        end
+
+        describe "#simulate_new_response" do
+          context "with type: :parametric" do
+            let(:new_response) { model_fit.simulate_new_response(type: :parametric) }
+
+            it "generates an Array" do
+              expect(new_response.is_a?(Array)).to be_truthy
+            end
+
+            it "gives an Array of the correct length" do
+              expect(new_response.length).to eq(model_fit.model_data.n)
+            end
+
+            it "gives an Array of Floats" do
+              expect(new_response.all?{|y| y.is_a?(Float)}).to be_truthy
+            end
+          end
+        end
+
+        describe "#drop" do
+          let(:new_model) { model_fit.drop(:Species) }
+
+          # Compare to the results obtained in R vie lme4:
+          #
+          #  > mod <- lmer(Aggression ~ Age + (Age | Location), data=df)
+          #  Warning message:
+          #  In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+          #    Model is nearly unidentifiable: very large eigenvalue
+          #   - Rescale variables?
+          #  > REMLcrit(mod)
+          #  [1] 1440.306
+          #  > fixef(mod)
+          #  (Intercept)         Age 
+          #   725.645778   -0.631179 
+          #  
+          #  > sigma(mod)
+          #  [1] 335.1927
+          #
+
+          it "finds the minimal REML deviance correctly" do
+            expect(new_model.deviance).to be_within(1e-3).of(1440.306)
+          end
+
+          it "estimates the residual standard deviation correctly" do
+            expect(new_model.sigma).to be_within(1e-2).of(335.1927)
+          end
+
+          it "estimates the fixed effects terms correctly" do
+            fix_ef_from_R = [725.645778, -0.631179] 
+            new_model.fix_ef.values.each_with_index do |e, i|
+              expect(e).to be_within(0.1).of(fix_ef_from_R[i])
+            end
+          end
+
+          it "names the fixed effects correctly" do
+            fix_ef_names = [:intercept, :Age]
+            expect(new_model.fix_ef.keys).to eq(fix_ef_names)
+          end
+
+          it "names the random effects correctly" do
+            ran_ef_names = [:intercept_Asylum, :Age_Asylum, :intercept_Earth, 
+                            :Age_Earth, :intercept_OodSphere, :Age_OodSphere]
+            expect(new_model.ran_ef.keys).to eq(ran_ef_names)
+          end
         end
       end
     end
@@ -879,7 +564,7 @@ describe LMM do
   ############################################################################
   ############################################################################
 
-  context "fit from raw matrices with fixed and random intercept and slope" do
+  context "when fit from raw matrices with fixed and random intercept and slope" do
     subject(:model_fit) do
       # generate the 500x2 fixed effects design matrix
       x_array = Array.new(100) { 1 }
