@@ -511,7 +511,7 @@ describe LMM do
         describe "#drop_fix_ef" do
           let(:new_model) { model_fit.drop_fix_ef(:Species) }
 
-          # Compare to the results obtained in R vie lme4:
+          # Compare to the results obtained in R via lme4:
           #
           #  > mod <- lmer(Aggression ~ Age + (Age | Location), data=df)
           #  Warning message:
@@ -552,6 +552,134 @@ describe LMM do
             ran_ef_names = [:intercept_Asylum, :Age_Asylum, :intercept_Earth, 
                             :Age_Earth, :intercept_OodSphere, :Age_OodSphere]
             expect(new_model.ran_ef.keys).to eq(ran_ef_names)
+          end
+        end
+
+        describe "#drop_ran_ef" do
+          let(:new_model) { model_fit.drop_ran_ef(:Age, :Location) }
+
+          # Compare to the results obtained in R via lme4:
+          #
+          #  > mod = lmer(Aggression ~ Age + Species + (1 | Location), data=df)
+          #  > REMLcrit(mod)
+          #  [1] 749.8919
+          #  > fixef(mod)
+          #          (Intercept)                 Age        SpeciesHuman 
+          #        1014.71798758         -0.06950405       -500.17069872 
+          #           SpeciesOod SpeciesWeepingAngel 
+          #        -894.46821460       -198.45767000 
+          #  > ranef(mod)
+          #  $Location
+          #            (Intercept)
+          #  Asylum     -121.20140
+          #  Earth        60.49505
+          #  OodSphere    60.70635
+          #
+          #  > sigma(mod)
+          #  [1] 10.01297
+          #
+
+          it "finds the minimal REML deviance correctly" do
+            expect(new_model.deviance).to be_within(1e-4).of(749.8919)
+          end
+
+          it "estimates the residual standard deviation correctly" do
+            expect(new_model.sigma).to be_within(1e-4).of(10.01297)
+          end
+
+          it "estimates the fixed effects terms correctly" do
+            fix_ef_from_R = [1014.71798758, -0.06950405, -500.17069872,
+                             -894.46821460, -198.45767000] 
+            new_model.fix_ef.values.each_with_index do |e, i|
+              expect(e).to be_within(1e-4).of(fix_ef_from_R[i])
+            end
+          end
+
+          it "estimates the random effects terms correctly" do
+            ran_ef_from_R = [-121.20140, 60.49505, 60.70635] 
+            new_model.ran_ef.values.each_with_index do |e, i|
+              expect(e).to be_within(1e-4).of(ran_ef_from_R[i])
+            end
+          end
+
+          it "names the fixed effects correctly" do
+            fix_ef_names = [:intercept, :Age, :Species_lvl_Human, :Species_lvl_Ood, :Species_lvl_WeepingAngel]
+            expect(new_model.fix_ef.keys).to eq(fix_ef_names)
+          end
+
+          it "names the random effects correctly" do
+            ran_ef_names = [:intercept_Asylum, :intercept_Earth, :intercept_OodSphere]
+            expect(new_model.ran_ef.keys).to eq(ran_ef_names)
+          end
+
+          context "with multiple groups of random effects for the same grouping variable" do
+
+            let(:alternative_model_fit) do 
+              case constructor_method
+              when "#from_formula"
+                LMM.from_formula(formula: "Aggression ~ Age + Species + (1 | Location) + (0 + Age | Location)", data: df)
+              when "#from_daru"
+                LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age, :Species], 
+                              random_effects: [[:intercept], [:Age]], grouping: [:Location, :Location], 
+                              reml: true, data: df)
+              end
+            end
+
+            let(:alternative_new_model) { alternative_model_fit.drop_ran_ef(:Age, :Location) }
+
+            # Compare to the results obtained in R via lme4:
+            #
+            #  > mod = lmer(Aggression ~ Age + Species + (1 | Location), data=df)
+            #  > REMLcrit(mod)
+            #  [1] 749.8919
+            #  > fixef(mod)
+            #          (Intercept)                 Age        SpeciesHuman 
+            #        1014.71798758         -0.06950405       -500.17069872 
+            #           SpeciesOod SpeciesWeepingAngel 
+            #        -894.46821460       -198.45767000 
+            #  > ranef(mod)
+            #  $Location
+            #            (Intercept)
+            #  Asylum     -121.20140
+            #  Earth        60.49505
+            #  OodSphere    60.70635
+            #
+            #  > sigma(mod)
+            #  [1] 10.01297
+            #
+
+            it "finds the minimal REML deviance correctly" do
+              expect(alternative_new_model.deviance).to be_within(1e-4).of(749.8919)
+            end
+
+            it "estimates the residual standard deviation correctly" do
+              expect(alternative_new_model.sigma).to be_within(1e-4).of(10.01297)
+            end
+
+            it "estimates the fixed effects terms correctly" do
+              fix_ef_from_R = [1014.71798758, -0.06950405, -500.17069872,
+                               -894.46821460, -198.45767000] 
+              alternative_new_model.fix_ef.values.each_with_index do |e, i|
+                expect(e).to be_within(1e-4).of(fix_ef_from_R[i])
+              end
+            end
+
+            it "estimates the random effects terms correctly" do
+              ran_ef_from_R = [-121.20140, 60.49505, 60.70635] 
+              alternative_new_model.ran_ef.values.each_with_index do |e, i|
+                expect(e).to be_within(1e-4).of(ran_ef_from_R[i])
+              end
+            end
+
+            it "names the fixed effects correctly" do
+              fix_ef_names = [:intercept, :Age, :Species_lvl_Human, :Species_lvl_Ood, :Species_lvl_WeepingAngel]
+              expect(alternative_new_model.fix_ef.keys).to eq(fix_ef_names)
+            end
+
+            it "names the random effects correctly" do
+              ran_ef_names = [:intercept_Asylum, :intercept_Earth, :intercept_OodSphere]
+              expect(alternative_new_model.ran_ef.keys).to eq(ran_ef_names)
+            end
           end
         end
       end
@@ -966,6 +1094,12 @@ describe LMM do
     describe "#drop_fix_ef" do
       it "should raise NotImplementedError" do
         expect{model_fit.drop_fix_ef(:x0)}.to raise_error(NotImplementedError)
+      end
+    end
+
+    describe "#drop_ran_ef" do
+      it "should raise NotImplementedError" do
+        expect{model_fit.drop_ran_ef(:z0, :grp)}.to raise_error(NotImplementedError)
       end
     end
   end

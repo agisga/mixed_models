@@ -367,7 +367,8 @@ class LMM
 
     # construct the random effects model matrix and covariance function 
     num_groups = grouping_copy.length
-    raise(ArgumentError, "Length of +random_effects+ mismatches length of +grouping+") unless random_effects_copy.length == num_groups
+    raise(ArgumentError, "Length of +random_effects+ (#{random_effects_copy.length}) " +
+          "mismatches length of +grouping+ (#{num_groups})") unless random_effects_copy.length == num_groups
     ran_ef_raw_mat = Array.new
     ran_ef_grp     = Array.new
     num_ran_ef     = Array.new
@@ -799,8 +800,7 @@ class LMM
   #   an Array of length two. An intercept term can be denoted as +:intercept+.
   #
   def drop_fix_ef(variable)
-    raise(ArgumentError, "Please pass the name of the variable to be dropped") unless variable
-    raise(NotImplementedError, "LMM#drop does not work if the model was not fit using a Daru::DataFrame") if @from_daru_args.nil?
+    raise(NotImplementedError, "LMM#drop_fix_ef does not work if the model was not fit using a Daru::DataFrame") if @from_daru_args.nil?
     raise(ArgumentError, "variable is not one of the fixed effects of the linear mixed model") unless @from_daru_args[:fixed_effects].include? variable
 
     fe = Marshal.load(Marshal.dump(@from_daru_args[:fixed_effects]))
@@ -816,6 +816,62 @@ class LMM
                          offset: @model_data.offset, 
                          reml: @reml, 
                          start_point: @optimization_result.start_point,
+                         epsilon: @optimization_result.epsilon, 
+                         max_iterations: @optimization_result.max_iterations, 
+                         formula: @formula)
+  end
+
+  # Drop one random effects term from the model; i.e. refit the model without one random effect variable.
+  # Works only if the model was fit via #from_daru or #from_formula.
+  #
+  # === Arguments
+  #
+  # * +variable+ - name of the random effect to be dropped. An interaction effect can be specified as 
+  #   an Array of length two. An intercept term can be denoted as +:intercept+.
+  # * +grouping+ - the grouping variable corresponding to +variable+
+  # * +start_point+ - (optional) since the same starting point can not be used in the optimization algorithm 
+  #   to fit a model with fewer random effects, a new starting point can be provided with this argument
+  #
+  def drop_ran_ef(variable, grouping, start_point: nil)
+    raise(NotImplementedError, "LMM#drop_ran_ef does not work if the model was not fit using a Daru::DataFrame") if @from_daru_args.nil?
+    raise(ArgumentError, "grouping is not one of grouping variables in the linear mixed model") unless @from_daru_args[:grouping].include? grouping
+
+    # get the indices of groups of random effects with grouping structure 
+    # determined by the variable +grouping+
+    possible_ind = @from_daru_args[:grouping].each_with_index.select { |var, i| var == grouping }.map { |pair| pair[1] }
+    # get the index of +variable+ and the index of the corresponding group
+    variable_ind= nil
+    group_ind = nil
+    possible_ind.each do |i|
+      unless variable_ind then
+        variable_ind = @from_daru_args[:random_effects][i].find_index variable 
+        group_ind = i
+      end
+    end
+    raise(ArgumentError, "variable does not match grouping") unless variable_ind
+
+    # delete the variable from the Array of random effects names
+    re = Marshal.load(Marshal.dump(@from_daru_args[:random_effects]))
+    re[group_ind].delete_at variable_ind
+    # delete group of random effects if no more variables fall under it;
+    # also delete group of random effects if nothing but :intercept and :no_intercept fall under it
+    gr = Marshal.load(Marshal.dump(@from_daru_args[:grouping]))
+    if (re[group_ind].empty? || re[group_ind].uniq == [:no_intercept] ||
+        re[group_ind].uniq == [:intercept, :no_intercept] || 
+        re[group_ind].uniq == [:no_intercept, :intercept]) then
+      gr.delete_at group_ind
+      re.delete_at group_ind
+    end
+
+    return LMM.from_daru(response: @from_daru_args[:response], 
+                         fixed_effects: @from_daru_args[:fixed_effects], 
+                         random_effects: re,
+                         grouping: gr,
+                         data: @from_daru_args[:data],
+                         weights: @model_data.weights, 
+                         offset: @model_data.offset, 
+                         reml: @reml, 
+                         start_point: start_point,
                          epsilon: @optimization_result.epsilon, 
                          max_iterations: @optimization_result.max_iterations, 
                          formula: @formula)
