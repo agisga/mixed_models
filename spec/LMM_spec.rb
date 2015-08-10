@@ -660,6 +660,80 @@ describe LMM do
             end
           end
         end
+
+        describe "#likelihood_ratio_test" do
+          context "when testing fixed effects" do
+
+            let(:full_model) do 
+              case constructor_method
+              when "#from_formula"
+                LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", 
+                                 reml: false, data: df)
+              when "#from_daru"
+                LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age, :Species], 
+                              random_effects: [[:intercept, :Age]], grouping: [:Location], reml: false, data: df)
+              end
+            end
+
+            let(:reduced_model) { full_model.drop_fix_ef(:Age) }
+
+            # Compare to the results obtained in R via lme4:
+            #
+            #  > full = lmer(Aggression ~ Age + Species + (Age | Location), df, REML=FALSE)
+            #  > reduced = lmer(Aggression ~ Species + (Age | Location), df, REML=FALSE)
+            #  > anova(full, reduced)
+            #  Data: df
+            #  Models:
+            #  reduced: Aggression ~ Species + (Age | Location)
+            #  full: Aggression ~ Age + Species + (Age | Location)
+            #          Df    AIC    BIC  logLik deviance Chisq Chi Df Pr(>Chisq)
+            #  reduced  8 354.27 375.11 -169.13   338.27                        
+            #  full     9 355.57 379.01 -168.78   337.57 0.703      1     0.4018
+            #
+
+            it "computes the p-value correctly" do
+              p = LMM.likelihood_ratio_test(reduced_model, full_model, method: :chi2)
+              expect(p).to be_within(1e-4).of(0.4018)
+            end
+          end
+
+          context "when testing random effects" do
+
+            let(:full_model) do 
+              case constructor_method
+              when "#from_formula"
+                LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", 
+                                 reml: false, data: df)
+              when "#from_daru"
+                LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age, :Species], 
+                              random_effects: [[:intercept, :Age]], grouping: [:Location], reml: false, data: df)
+              end
+            end
+
+            let(:reduced_model) { full_model.drop_ran_ef(:Age, :Location) }
+
+            # Compare to the results obtained in R via lme4:
+            #
+            #  > full = lmer(Aggression ~ Age + Species + (Age | Location), df, REML=FALSE)
+            #  > reduced = lmer(Aggression ~ Age + Species + (1 | Location), df, REML=FALSE)
+            #  > anova(full, reduced)
+            #  Data: df
+            #  Models:
+            #  reduced: Aggression ~ Age + Species + (1 | Location)
+            #  full: Aggression ~ Age + Species + (Age | Location)
+            #          Df    AIC    BIC  logLik deviance  Chisq Chi Df Pr(>Chisq)    
+            #  reduced  7 777.85 796.09 -381.93   763.85                             
+            #  full     9 355.57 379.01 -168.78   337.57 426.29      2  < 2.2e-16 ***
+            #  ---
+            #  Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+            #
+
+            it "computes the p-value correctly" do
+              p = LMM.likelihood_ratio_test(reduced_model, full_model, method: :chi2)
+              expect(p).to be_within(1e-15).of(0.0)
+            end
+          end
+        end
       end
     end
   end

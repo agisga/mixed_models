@@ -32,6 +32,8 @@ class LMM
   attr_reader :fix_ef_names
   # names of the random effects coefficients
   attr_reader :ran_ef_names
+  # Hash storing some model specification information supplied to #from_daru
+  attr_reader :from_daru_args
 
   # Fit and store a linear mixed effects model according to the input from the user.
   # Parameter estimates are obtained by the method described in Bates et. al. (2014).
@@ -791,6 +793,52 @@ class LMM
     return new_response.to_flat_a
   end
 
+  # Perform bootstrapping for linear mixed models to generate bootstrap samples of the parameters.
+  #
+  # === Arguments
+  #
+  # * +nsim+ - number of simulations
+  # * +what_to_collect+ - (optional) a Proc taking a LMM object as input, and generating a 
+  #   statistic of interest; if unspecified, then an Array containing the estimates of the fixed 
+  #   effects terms for each simulated model is generated 
+  # * +how_to_simulate+ - (optional) a Proc taking a LMM object as input, and returning a new 
+  #   simulated response as an Array; if unspecified, then LMM#simulate_new_response is used instead
+  # * +type+ - (optional) the argument +type+ for LMM#simulate_new_response; only used if
+  #   +how_to_simulate+ is unspecified
+  # * +parallel+ - if true than the resampling is done in parallel using all available CPUs; 
+  #   default is true
+  #
+  # === References
+  #
+  # * Joseph E., Cavanaugh ; Junfeng, Shang. (2008) An assumption for the development of bootstrap 
+  #   variants of the Akaike information criterion in mixed models. In: Statistics & Probability Letters. 
+  #   Accessible at http://personal.bgsu.edu/~jshang/AICb_assumption.pdf.
+  #
+  def bootstrap(nsim:, how_to_simulate: nil, type: :parametric, what_to_collect: nil, parallel: true)
+    require 'parallel'
+    num_proc = (parallel ? Parallel.processor_count : 0)
+
+    results = Parallel.map((0...nsim).to_a, :in_processes => num_proc) do |i|
+      new_y = if how_to_simulate then
+                how_to_simulate.call(self)
+              else
+                self.simulate_new_response(type: type)
+              end
+
+      new_model = self.refit(x: @model_data.x, 
+                             y: NMatrix.new([@model_data.n, 1], new_y, dtype: :float64), 
+                             zt: @model_data.zt)
+
+      if what_to_collect then
+        what_to_collect.call(new_model)
+      else
+        new_model.fix_ef
+      end
+    end
+
+    return results
+  end
+
   # Drop one fixed effect predictor from the model; i.e. refit the model without one predictor variable.
   # Works only if the model was fit via #from_daru or #from_formula.
   #
@@ -877,50 +925,93 @@ class LMM
                          formula: @formula)
   end
 
-  # Perform bootstrapping for linear mixed models to generate bootstrap samples of the parameters.
+  # Computes the likelihood ratio statistic of two linear mixed models as
+  # 2 * log(L2 / L1), where L1 and L2 denote the likelihood of +model1+ and +model2+ respectively. 
+  # 
+  # == Arguments
   #
-  # === Arguments
-  #
-  # * +nsim+ - number of simulations
-  # * +what_to_collect+ - (optional) a Proc taking a LMM object as input, and generating a 
-  #   statistic of interest; if unspecified, then an Array containing the estimates of the fixed 
-  #   effects terms for each simulated model is generated 
-  # * +how_to_simulate+ - (optional) a Proc taking a LMM object as input, and returning a new 
-  #   simulated response as an Array; if unspecified, then LMM#simulate_new_response is used instead
-  # * +type+ - (optional) the argument +type+ for LMM#simulate_new_response; only used if
-  #   +how_to_simulate+ is unspecified
-  # * +parallel+ - if true than the resampling is done in parallel using all available CPUs; 
-  #   default is true
+  # * +model1+ - a LMM object
+  # * +model2+ - a LMM object
   #
   # === References
+  # 
+  # * J. C. Pinheiro and D. M. Bates, "Mixed Effects Models in S and S-PLUS", Springer, 2000.
   #
-  # * Joseph E., Cavanaugh ; Junfeng, Shang. (2008) An assumption for the development of bootstrap 
-  #   variants of the Akaike information criterion in mixed models. In: Statistics & Probability Letters. 
-  #   Accessible at http://personal.bgsu.edu/~jshang/AICb_assumption.pdf.
+  def LMM.likelihood_ratio(model1, model2)
+    # compute the likelihood ratio as in 2.4.1 in Pinheiro & Bates (2000)
+    model1.deviance - model2.deviance
+  end
+
+  # Performs a likelihood ratio test for two nested models. Nested means that all predictors
+  # used in +model1+ must also be predictors in +model2+ (i.e. +model1+ is a reduced version of +model2+). 
+  # The null hypothesis is that the restricted model (+model1+) is adequate. 
+  # This mehod works only if both models were fit using the deviance (as opposed to REML criterion) as 
+  # the objective function for the minimization (i.e. fit with reml: false).
+  # Returned is the p-value of the test.
   #
-  def bootstrap(nsim:, how_to_simulate: nil, type: :parametric, what_to_collect: nil, parallel: true)
-    require 'parallel'
-    num_proc = (parallel ? Parallel.processor_count : 0)
+  # == Arguments
+  #
+  # * +model1+ - a restricted model, nested with respect to +model2+, a LMM object
+  # * +model2+ - a more general model than +model1+, a LMM object
+  # * +method+ - the method used to perform the test; possibilities are:
+  #   +:chi2+ approximates the likelihood ratio test statistic with a Chi squared distribution
+  #   as delineated in 2.4.1 in Pinheiro & Bates (2000);
+  #
+  # === References
+  # 
+  # * J. C. Pinheiro and D. M. Bates, "Mixed Effects Models in S and S-PLUS", Springer, 2000.
+  #
+  def LMM.likelihood_ratio_test(model1, model2, method: :chi2)
+    raise(NotImplementedError, "does not work if linear mixed model was not " +
+          "fit using a Daru::DataFrame") if model1.from_daru_args.nil? || model2.from_daru_args.nil?
+    raise(ArgumentError, "both model should be based on the deviance function " +
+          "instead of the REML criterion (i.e. reml: false)") if model1.reml || model2.reml
 
-    results = Parallel.map((0...nsim).to_a, :in_processes => num_proc) do |i|
-      new_y = if how_to_simulate then
-                how_to_simulate.call(self)
-              else
-                self.simulate_new_response(type: type)
-              end
-
-      new_model = self.refit(x: @model_data.x, 
-                             y: NMatrix.new([@model_data.n, 1], new_y, dtype: :float64), 
-                             zt: @model_data.zt)
-
-      if what_to_collect then
-        what_to_collect.call(new_model)
-      else
-        new_model.fix_ef
+    ##############################
+    # check if models are nested
+    ##############################
+    
+    # check for fixed effects that model1 has but model2 does not
+    fe = model1.from_daru_args[:fixed_effects] - model2.from_daru_args[:fixed_effects]
+    raise(ArgumentError, "fixed effects of model1 must be a subset of those of model2") unless fe.empty?
+    # check for random effects that model1 has but model2 does not
+    len = model1.from_daru_args[:random_effects].length
+    if len == model2.from_daru_args[:random_effects].length then
+      # one group of random effects of model1 must have fewer variables in this case
+      len.times do |i|
+        re = model1.from_daru_args[:random_effects][i] - model2.from_daru_args[:random_effects][i]
+        raise(ArgumentError, "random effects of model1 must be a subset of those of model2") unless re.empty?
       end
+    else
+      # model1 must have fewer groups of random effects in this case
+      re = model1.from_daru_args[:random_effects] - model2.from_daru_args[:random_effects]
+      raise(ArgumentError, "random effects of model1 must be a subset of those of model2") unless re.empty?
+    end
+    # check for grouping variables that model1 has but model2 does not
+    gr = model1.from_daru_args[:grouping] - model2.from_daru_args[:grouping]
+    raise(ArgumentError, "grouping variables of model1 must be a subset of those of model2") unless gr.empty?
+
+    ##############################
+    # Compute the test statistic
+    ##############################
+
+    likelihood_ratio = LMM.likelihood_ratio(model1, model2)
+
+    ##############################
+    # Perform the test
+    ##############################
+
+    case method
+    when :chi2
+      num_param_model1 = model1.fix_ef.length + model1.theta.length
+      num_param_model2 = model2.fix_ef.length + model2.theta.length
+      df = num_param_model2 - num_param_model1
+      p_value = Distribution::ChiSquare.q_chi2(df, likelihood_ratio)
+    else
+      raise(ArgumentError, "#{method} is not an available method")
     end
 
-    return results
+    return p_value
   end
 
   # Predictions from the fitted model on new data, conditional on the estimated fixed and random 
