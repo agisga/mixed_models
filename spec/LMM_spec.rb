@@ -23,14 +23,12 @@ describe LMM do
 
         context "using REML deviance" do
 
-          case constructor_method
-          when "#from_formula"
-            subject(:model_fit) do 
+          subject(:model_fit) do 
+            case constructor_method
+            when "#from_formula"
               LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", 
                                reml: true, data: df)
-            end
-          when "#from_daru"
-            subject(:model_fit) do
+            when "#from_daru"
               LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age, :Species], 
                             random_effects: [[:intercept, :Age]], grouping: [:Location], reml: true, data: df)
             end
@@ -130,14 +128,12 @@ describe LMM do
 
         context "using deviance function instead of REML" do
 
-          case constructor_method
-          when "#from_formula"
-            subject(:model_fit) do 
+          subject(:model_fit) do
+            case constructor_method
+            when "#from_formula"
               LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", 
                                reml: false, data: df)
-            end
-          when "#from_daru"
-            subject(:model_fit) do
+            when "#from_daru"
               LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age, :Species], 
                             random_effects: [[:intercept, :Age]], grouping: [:Location], reml: false, data: df)
             end
@@ -196,11 +192,11 @@ describe LMM do
       context "with numeric and categorical fixed effects and numeric random effects" do
         let(:df) { Daru::DataFrame.from_csv("spec/data/alien_species.csv") }
 
-        case constructor_method
-        when "#from_formula"
-          subject(:model_fit) { LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", data: df) }
-        when "#from_daru"
-          subject(:model_fit) do
+        subject(:model_fit) do
+          case constructor_method
+          when "#from_formula"
+            LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", data: df)
+          when "#from_daru"
             LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age, :Species], 
                           random_effects: [[:intercept, :Age]], grouping: [:Location], reml: true, data: df)
           end
@@ -628,25 +624,7 @@ describe LMM do
             let(:alternative_new_model) { alternative_model_fit.drop_ran_ef(:Age, :Location) }
 
             # Compare to the results obtained in R via lme4:
-            #
-            #  > mod = lmer(Aggression ~ Age + Species + (1 | Location), data=df)
-            #  > REMLcrit(mod)
-            #  [1] 749.8919
-            #  > fixef(mod)
-            #          (Intercept)                 Age        SpeciesHuman 
-            #        1014.71798758         -0.06950405       -500.17069872 
-            #           SpeciesOod SpeciesWeepingAngel 
-            #        -894.46821460       -198.45767000 
-            #  > ranef(mod)
-            #  $Location
-            #            (Intercept)
-            #  Asylum     -121.20140
-            #  Earth        60.49505
-            #  OodSphere    60.70635
-            #
-            #  > sigma(mod)
-            #  [1] 10.01297
-            #
+            # same as last example
 
             it "finds the minimal REML deviance correctly" do
               expect(alternative_new_model.deviance).to be_within(1e-4).of(749.8919)

@@ -8,11 +8,11 @@ describe LMM do
 
           let(:df) { Daru::DataFrame.from_csv("spec/data/categorical_data.csv") }
 
-          case constructor_method
-          when "#from_formula"
-            subject(:model_fit) { LMM.from_formula(formula: "y ~ x + (x | g)", epsilon: 1e-8, data: df) }
-          when "#from_daru"
-            subject(:model_fit) do
+          subject(:model_fit) do
+            case constructor_method
+            when "#from_formula"
+              LMM.from_formula(formula: "y ~ x + (x | g)", epsilon: 1e-8, data: df)
+            when "#from_daru"
               LMM.from_daru(response: :y, fixed_effects: [:intercept, :x], 
                             random_effects: [[:intercept, :x]], grouping: [:g], 
                             epsilon: 1e-8, data: df)
@@ -75,11 +75,11 @@ describe LMM do
 
           let(:df) { Daru::DataFrame.from_csv("spec/data/categorical_data.csv") }
 
-          case constructor_method
-          when "#from_formula"
-            subject(:model_fit) { LMM.from_formula(formula: "y ~ x + (0 + x | g)", epsilon: 1e-8, data: df) }
-          when "#from_daru"
-            subject(:model_fit) do
+          subject(:model_fit) do
+            case constructor_method
+            when "#from_formula"
+              LMM.from_formula(formula: "y ~ x + (0 + x | g)", epsilon: 1e-8, data: df)
+            when "#from_daru"
               LMM.from_daru(response: :y, fixed_effects: [:intercept, :x],
                             random_effects: [[:no_intercept, :x]], grouping: [:g], 
                             epsilon: 1e-8, data: df)
@@ -144,11 +144,11 @@ describe LMM do
 
           let(:df) { Daru::DataFrame.from_csv("spec/data/categorical_data.csv") }
 
-          case constructor_method
-          when "#from_formula"
-            subject(:model_fit) { LMM.from_formula(formula: "y ~ 0 + x + (x | g)", epsilon: 1e-8, data: df) }
-          when "#from_daru"
-            subject(:model_fit) do
+          subject(:model_fit) do
+            case constructor_method
+            when "#from_formula"
+              LMM.from_formula(formula: "y ~ 0 + x + (x | g)", epsilon: 1e-8, data: df)
+            when "#from_daru"
               LMM.from_daru(response: :y, fixed_effects: [:no_intercept, :x],
                             random_effects: [[:intercept, :x]], grouping: [:g], 
                             epsilon: 1e-8, data: df)

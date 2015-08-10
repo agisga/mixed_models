@@ -8,11 +8,11 @@ describe LMM do
           
           let(:df) { Daru::DataFrame.from_csv("spec/data/numeric_x_numeric_interaction.csv") }
 
-          case constructor_method
-          when "#from_formula"
-            subject(:model_fit) { LMM.from_formula(formula: "y ~ a + b + a:b + (0 + a:b | gr)", data: df) }
-          when "#from_daru"
-            subject(:model_fit) do
+          subject(:model_fit) do
+            case constructor_method
+            when "#from_formula"
+              LMM.from_formula(formula: "y ~ a + b + a:b + (0 + a:b | gr)", data: df)
+            when "#from_daru"
               LMM.from_daru(response: :y, fixed_effects: [:intercept, :a, :b, [:a, :b]], 
                             random_effects: [[:no_intercept, [:a, :b]]], grouping: [:gr], data: df)
             end
@@ -114,11 +114,11 @@ describe LMM do
 
           let(:df) { Daru::DataFrame.from_csv("spec/data/numeric_x_categorical_interaction.csv") }
 
-          case constructor_method
-          when "#from_formula"
-            subject(:model_fit) { LMM.from_formula(formula: "y ~ num + cat + num:cat + (0 + num:cat | gr)", data: df) }
-          when "#from_daru"
-            subject(:model_fit) do
+          subject(:model_fit) do
+            case constructor_method
+            when "#from_formula"
+              LMM.from_formula(formula: "y ~ num + cat + num:cat + (0 + num:cat | gr)", data: df)
+            when "#from_daru"
               LMM.from_daru(response: :y, fixed_effects: [:intercept, :num, :cat, [:num, :cat]],
                             random_effects: [[:no_intercept, [:num, :cat]]], grouping: [:gr], data: df)
             end
@@ -182,11 +182,11 @@ describe LMM do
 
           let(:df) { Daru::DataFrame.from_csv("spec/data/numeric_x_categorical_interaction.csv") }
 
-          case constructor_method
-          when "#from_formula"
-            subject(:model_fit) { LMM.from_formula(formula: "y ~ cat + num + cat:num + (0 + cat:num | gr)", data: df) }
-          when "#from_daru"
-            subject(:model_fit) do
+          subject(:model_fit) do
+            case constructor_method
+            when "#from_formula"
+              LMM.from_formula(formula: "y ~ cat + num + cat:num + (0 + cat:num | gr)", data: df)
+            when "#from_daru"
               LMM.from_daru(response: :y, fixed_effects: [:intercept, :cat, :num, [:cat, :num]],
                             random_effects: [[:no_intercept, [:cat, :num]]], grouping: [:gr], data: df)
             end
@@ -239,11 +239,11 @@ describe LMM do
 
           context "with both non-interaction fixed effects and fixed intercept, but no random non-interaction effects and without random intercept" do
 
-            case constructor_method
-            when "#from_formula"
-              subject(:model_fit) { LMM.from_formula(formula: "y ~ f1 + f2 + f1:f2 + (0 + f1:f2 | gr)", data: df) }
-            when "#from_daru"
-              subject(:model_fit) do
+            subject(:model_fit) do
+              case constructor_method
+              when "#from_formula"
+                LMM.from_formula(formula: "y ~ f1 + f2 + f1:f2 + (0 + f1:f2 | gr)", data: df)
+              when "#from_daru"
                 LMM.from_daru(response: :y, fixed_effects: [:intercept, :f1, :f2, [:f1, :f2]],
                               random_effects: [[:no_intercept, [:f1, :f2]]], grouping: [:gr], data: df)
               end
@@ -334,11 +334,11 @@ describe LMM do
 
           context "without non-interaction fixed effects, with fixed intercept, with one random non-interaction effect and without random intercept" do
 
-            case constructor_method
-            when "#from_formula"
-              subject(:model_fit) { LMM.from_formula(formula: "y ~ f1:f2 + (0 + f1 + f1:f2 | gr)", data: df) }
-            when "#from_daru"
-              subject(:model_fit) do
+            subject(:model_fit) do
+              case constructor_method
+              when "#from_formula"
+                LMM.from_formula(formula: "y ~ f1:f2 + (0 + f1 + f1:f2 | gr)", data: df)
+              when "#from_daru"
                 LMM.from_daru(response: :y, fixed_effects: [:intercept, [:f1, :f2]],
                               random_effects: [[:no_intercept, :f1, [:f1, :f2]]], grouping: [:gr], data: df)
               end
@@ -430,11 +430,11 @@ describe LMM do
 
           context "with one non-interaction fixed effects term, with fixed intercept, without random non-intercept terms" do
             
-            case constructor_method
-            when "#from_formula"
-              subject(:model_fit) { LMM.from_formula(formula: "y ~ f2 + f1:f2 + (1 | gr)", data: df) }
-            when "#from_daru"
-              subject(:model_fit) do
+            subject(:model_fit) do
+              case constructor_method
+              when "#from_formula"
+                LMM.from_formula(formula: "y ~ f2 + f1:f2 + (1 | gr)", data: df)
+              when "#from_daru"
                 LMM.from_daru(response: :y, fixed_effects: [:intercept, :f2, [:f1, :f2]],
                               random_effects: [[:intercept]], grouping: [:gr], data: df)
               end
