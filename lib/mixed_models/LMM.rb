@@ -945,7 +945,7 @@ class LMM
   # Performs a likelihood ratio test for two nested models. Nested means that all predictors
   # used in +model1+ must also be predictors in +model2+ (i.e. +model1+ is a reduced version of +model2+). 
   # The null hypothesis is that the restricted model (+model1+) is adequate. 
-  # This mehod works only if both models were fit using the deviance (as opposed to REML criterion) as 
+  # This method works only if both models were fit using the deviance (as opposed to REML criterion) as 
   # the objective function for the minimization (i.e. fit with reml: false).
   # Returned is the p-value of the test.
   #

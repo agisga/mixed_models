@@ -661,6 +661,40 @@ describe LMM do
           end
         end
 
+        describe "#likelihood_ratio" do
+          let(:full_model) do 
+            case constructor_method
+            when "#from_formula"
+              LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", 
+                               reml: false, data: df)
+            when "#from_daru"
+              LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age, :Species], 
+                            random_effects: [[:intercept, :Age]], grouping: [:Location], reml: false, data: df)
+            end
+          end
+
+          let(:reduced_model) { full_model.drop_fix_ef(:Age) }
+
+          # Compare to the results obtained in R via lme4:
+          #
+          #  > full = lmer(Aggression ~ Age + Species + (Age | Location), df, REML=FALSE)
+          #  > reduced = lmer(Aggression ~ Species + (Age | Location), df, REML=FALSE)
+          #  > anova(full, reduced)
+          #  Data: df
+          #  Models:
+          #  reduced: Aggression ~ Species + (Age | Location)
+          #  full: Aggression ~ Age + Species + (Age | Location)
+          #          Df    AIC    BIC  logLik deviance Chisq Chi Df Pr(>Chisq)
+          #  reduced  8 354.27 375.11 -169.13   338.27                        
+          #  full     9 355.57 379.01 -168.78   337.57 0.703      1     0.4018
+          #
+
+          it "computes the likelihood ratio statistic correctly" do
+            lr = LMM.likelihood_ratio(reduced_model, full_model)
+            expect(lr).to be_within(1e-3).of(0.703)
+          end
+        end
+
         describe "#likelihood_ratio_test" do
           context "when testing fixed effects" do
 
@@ -731,6 +765,164 @@ describe LMM do
             it "computes the p-value correctly" do
               p = LMM.likelihood_ratio_test(reduced_model, full_model, method: :chi2)
               expect(p).to be_within(1e-15).of(0.0)
+            end
+
+            context "with multiple groups of random effects" do
+
+              let(:alternative_full_model) do 
+                case constructor_method
+                when "#from_formula"
+                  LMM.from_formula(formula: "Aggression ~ Age + Species + (1 | Location) + (0 + Age | Location)", 
+                                   data: df, reml: false)
+                when "#from_daru"
+                  LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age, :Species], 
+                                random_effects: [[:intercept], [:Age]], grouping: [:Location, :Location], 
+                                reml: false, data: df)
+                end
+              end
+
+              let(:alternative_reduced_model) { alternative_full_model.drop_ran_ef(:Age, :Location) }
+
+              # Compare to the results obtained in R via lme4:
+              # same as last example
+
+              it "computes the p-value correctly" do
+                p = LMM.likelihood_ratio_test(alternative_reduced_model, alternative_full_model, method: :chi2)
+                expect(p).to be_within(1e-15).of(0.0)
+              end
+            end
+          end
+
+          context "with misspecified input arguments" do
+            context "when fixed effects are misspecified" do
+
+              let(:full_model) do 
+                case constructor_method
+                when "#from_formula"
+                  LMM.from_formula(formula: "Aggression ~ Species + (Age | Location)", 
+                                   reml: false, data: df)
+                when "#from_daru"
+                  LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Species], 
+                                random_effects: [[:intercept, :Age]], grouping: [:Location], reml: false, data: df)
+                end
+              end
+
+              let(:reduced_model) do 
+                case constructor_method
+                when "#from_formula"
+                  LMM.from_formula(formula: "Aggression ~ Location + (1 | Location)", 
+                                   reml: false, data: df)
+                when "#from_daru"
+                  LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Location], 
+                                random_effects: [[:intercept]], grouping: [:Location], reml: false, data: df)
+                end
+              end
+
+              it "should raise ArgumentError" do
+                expect{LMM.likelihood_ratio_test(reduced_model, full_model)}.to raise_error(ArgumentError)
+              end
+            end
+
+            context "when random effects are misspecified" do
+
+              context "when full and reduced models are swapped" do
+                let(:reduced_model) do 
+                  case constructor_method
+                  when "#from_formula"
+                    LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", 
+                                     reml: false, data: df)
+                  when "#from_daru"
+                    LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age, :Species], 
+                                  random_effects: [[:intercept, :Age]], grouping: [:Location], reml: false, data: df)
+                  end
+                end
+
+                let(:full_model) { reduced_model.drop_ran_ef(:Age, :Location) }
+
+                it "should raise ArgumentError" do
+                  expect{LMM.likelihood_ratio_test(reduced_model, full_model)}.to raise_error(ArgumentError)
+                end
+              end
+
+              context "with multiple groups of random effects" do
+                let(:full_model) do 
+                  case constructor_method
+                  when "#from_formula"
+                    LMM.from_formula(formula: "Aggression ~ Age + (1 | Species) + (0 + Age | Location)", 
+                                     reml: false, data: df)
+                  when "#from_daru"
+                    LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age], 
+                                  random_effects: [[:intercept], [:Age]], grouping: [:Species, :Location], 
+                                  reml: false, data: df)
+                  end
+                end
+
+                let(:reduced_model) do 
+                  case constructor_method
+                  when "#from_formula"
+                    LMM.from_formula(formula: "Aggression ~ Age + (0 + Age | Species) + (1 | Location)", 
+                                     reml: false, data: df)
+                  when "#from_daru"
+                    LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age], 
+                                  random_effects: [[:Age], [:intercept]], grouping: [:Species, :Location], 
+                                  reml: false, data: df)
+                  end
+                end
+
+                it "should raise ArgumentError" do
+                  expect{LMM.likelihood_ratio_test(reduced_model, full_model)}.to raise_error(ArgumentError)
+                end
+              end
+            end
+
+            context "when grouping variables do not match up" do
+
+              let(:full_model) do 
+                case constructor_method
+                when "#from_formula"
+                  LMM.from_formula(formula: "Aggression ~ Age + (1 | Location)", 
+                                   reml: false, data: df)
+                when "#from_daru"
+                  LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age], 
+                                random_effects: [[:intercept]], grouping: [:Location], reml: false, data: df)
+                end
+              end
+
+              let(:reduced_model) do 
+                case constructor_method
+                when "#from_formula"
+                  LMM.from_formula(formula: "Aggression ~ Age + (1 | Species)", 
+                                   reml: false, data: df)
+                when "#from_daru"
+                  LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age], 
+                                random_effects: [[:intercept]], grouping: [:Species], reml: false, data: df)
+                end
+              end
+
+              it "should raise ArgumentError" do
+                expect{LMM.likelihood_ratio_test(reduced_model, full_model)}.to raise_error(ArgumentError)
+              end
+            end
+
+            context "when model fit with REML" do
+
+              let(:full_model) do 
+                case constructor_method
+                when "#from_formula"
+                  LMM.from_formula(formula: "Aggression ~ Age + Species + (1 | Location) + (0 + Age | Location)", 
+                                   reml: true, data: df)
+                when "#from_daru"
+                  LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age, :Species], 
+                                random_effects: [[:intercept], [:Age]], grouping: [:Location, :Location], 
+                                reml: true, data: df)
+                end
+              end
+
+              let(:reduced_model) { full_model.drop_ran_ef(:Age, :Location) }
+
+              it "should raise ArgumentError" do
+                expect{LMM.likelihood_ratio_test(reduced_model, full_model)}.to raise_error(ArgumentError)
+              end
             end
           end
         end
