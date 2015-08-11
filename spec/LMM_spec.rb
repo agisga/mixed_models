@@ -411,6 +411,20 @@ describe LMM do
               expect(p).to be >0.0
             end
           end
+
+          context "using alias #fix_ef_test" do
+            it "computes the Wald p-values correctly" do
+              result_from_R = [0.0, 0.4673875, 0.0, 0.0, 0.0]
+              result = model_fit.fix_ef_test(method: :wald).values
+              result.each_index do |k| 
+                if result_from_R[k] == 0 then
+                  expect(result[k]).to eq(0)
+                else
+                  expect(result[k]/result_from_R[k]).to be_within(1e-4).of(1.0)
+                end
+              end
+            end
+          end
         end
 
         describe "#ran_ef_p" do
@@ -457,6 +471,13 @@ describe LMM do
                                       grouping: :Location, nsim: 5) 
               expect(p).to be <1.0
               expect(p).to be >0.0
+            end
+          end
+
+          context "using alias #ran_ef_test" do
+            it "computes the p-value correctly" do
+              p = full_model.ran_ef_test(method: :lrt, variable: :Age, grouping: :Location) 
+              expect(p).to be_within(1e-15).of(0.0)
             end
           end
         end

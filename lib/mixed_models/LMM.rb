@@ -532,6 +532,8 @@ class LMM
     return p
   end
 
+  alias fix_ef_test fix_ef_p
+
   # Significance test for random effects variables.
   # Available methods are a likelihood ratio test via the Chi squared approximation,
   # and a bootstrap based likelihood ratio test. Both types of likelihood ratio tests are
@@ -582,6 +584,8 @@ class LMM
 
     return p
   end
+
+  alias ran_ef_test ran_ef_p
 
   # Returns a Hash containing the confidence intervals of the fixed effects coefficients.
   #
