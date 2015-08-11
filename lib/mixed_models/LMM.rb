@@ -446,6 +446,32 @@ class LMM
     self.residuals.inject { |sse, r| sse + r**2.0 }
   end
 
+  # Computes the Akaike Information Criterion (AIC) using the formula given in 2.4.1 in
+  # Pinheiro & Bates (2000).
+  #
+  # === References
+  #
+  # * J. C. Pinheiro and D. M. Bates, "Mixed Effects Models in S and S-PLUS". Springer. 2000.
+  #
+  def aic
+    num_param = @fix_ef.length + self.theta.length + 1
+    aic = self.deviance + 2.0 * num_param
+    return aic
+  end
+
+  # Computes the Bayesian Information Criterion (BIC) using the formula given in 2.4.1 in
+  # Pinheiro & Bates (2000).
+  #
+  # === References
+  #
+  # * J. C. Pinheiro and D. M. Bates, "Mixed Effects Models in S and S-PLUS". Springer. 2000.
+  #
+  def bic
+    num_param = @fix_ef.length + self.theta.length + 1
+    bic = self.deviance + num_param * Math::log(@model_data.n)
+    return bic
+  end
+
   # Variance-covariance matrix of the estimates of the fixed effects terms, conditional on the
   # estimated covariance parameters, as given in equation (54) in Bates et. al. (2014).
   #

@@ -278,6 +278,22 @@ describe LMM do
         #  SpeciesHuman        -500.2194685 -499.1679220
         #  SpeciesOod          -900.1209556 -899.0176859
         #  SpeciesWeepingAngel -200.1294926 -199.0484237
+        #  > AIC(mod)
+        #  [1] 351.7155
+        #  > BIC(mod)
+        #  [1] 375.1621
+
+        describe "#aic" do
+          it "computes the Akaike information criterion correctly" do
+            expect(model_fit.aic).to be_within(1e-4).of(351.7155)
+          end
+        end
+
+        describe "#bic" do
+          it "computes the Bayesian information criterion correctly" do
+            expect(model_fit.bic).to be_within(1e-4).of(375.1621)
+          end
+        end
 
         describe "#predict" do
           context "with Daru::DataFrame new data input" do
