@@ -954,16 +954,26 @@ class LMM
   # * +model1+ - a restricted model, nested with respect to +model2+, a LMM object
   # * +model2+ - a more general model than +model1+, a LMM object
   # * +method+ - the method used to perform the test; possibilities are:
-  #   +:chi2+ approximates the likelihood ratio test statistic with a Chi squared distribution
+  #   +:chi2+ approximates distribution of the likelihood ratio test statistic with a Chi squared distribution
   #   as delineated in 2.4.1 in Pinheiro & Bates (2000);
+  #   +:bootstrap+ simulates a sample of +nsim+ LRT statistics under the null hypothesis, and estimates
+  #   the p-value as the proportion of LRT statistics greater than or equal to the oberved value, as delineated
+  #   in 4.2.3 in Davison & Hinkley (1997)
+  # * +nsim+   - (only relevant if method is +:bootstrap+) number of simulations for 
+  #   the bootstrapping
+  # * +parallel+ - (only relevant if method is +:bootstrap+) if true than the bootstrap
+  #   is performed in parallel using all available CPUs; default is true.
   #
   # === References
   # 
-  # * J. C. Pinheiro and D. M. Bates, "Mixed Effects Models in S and S-PLUS", Springer, 2000.
+  # * Section 2.4.1 in J. C. Pinheiro and D. M. Bates, "Mixed Effects Models in S and S-PLUS". Springer. 2000.
+  # * Section 4.2.3 in A. C. Davison and D. V. Hinkley, "Bootstrap Methods and their Application". 
+  #   Cambridge Series in Statistical and Probabilistic Mathematics. 1997.
   #
-  def LMM.likelihood_ratio_test(model1, model2, method: :chi2)
+  def LMM.likelihood_ratio_test(model1, model2, method: :chi2, nsim: 1000, parallel: true)
     raise(NotImplementedError, "does not work if linear mixed model was not " +
           "fit using a Daru::DataFrame") if model1.from_daru_args.nil? || model2.from_daru_args.nil?
+    raise(ArgumentError, "models were not fit to the same data") unless model1.from_daru_args[:data] == model2.from_daru_args[:data]
     raise(ArgumentError, "both model should be based on the deviance function " +
           "instead of the REML criterion (i.e. reml: false)") if model1.reml || model2.reml
 
@@ -1007,6 +1017,24 @@ class LMM
       num_param_model2 = model2.fix_ef.length + model2.theta.length
       df = num_param_model2 - num_param_model1
       p_value = Distribution::ChiSquare.q_chi2(df, likelihood_ratio)
+    when :bootstrap
+      require 'parallel'
+      num_proc = (parallel ? Parallel.processor_count : 0)
+
+      bootstrap_sample = Parallel.map((0...nsim).to_a, :in_processes => num_proc) do |i|
+        # simulate data according to the null model 
+        new_y = NMatrix.new([model1.model_data.n, 1], 
+                            model1.simulate_new_response(type: :parametric), 
+                            dtype: :float64)
+        # refit both models to new data
+        new_model1 = model1.refit(x: model1.model_data.x, y: new_y, zt: model1.model_data.zt)
+        new_model2 = model2.refit(x: model2.model_data.x, y: new_y, zt: model2.model_data.zt)
+        # compute LRT statistic
+        LMM.likelihood_ratio(new_model1, new_model2)
+      end
+
+      num_greater_or_equal = bootstrap_sample.each.select { |lr| lr >= likelihood_ratio }.length 
+      p_value = (num_greater_or_equal + 1.0) / (nsim + 1.0) 
     else
       raise(ArgumentError, "#{method} is not an available method")
     end

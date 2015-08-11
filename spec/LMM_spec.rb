@@ -725,9 +725,19 @@ describe LMM do
             #  full     9 355.57 379.01 -168.78   337.57 0.703      1     0.4018
             #
 
-            it "computes the p-value correctly" do
-              p = LMM.likelihood_ratio_test(reduced_model, full_model, method: :chi2)
-              expect(p).to be_within(1e-4).of(0.4018)
+            context "with method: :chi2" do
+              it "computes the p-value correctly" do
+                p = LMM.likelihood_ratio_test(reduced_model, full_model, method: :chi2)
+                expect(p).to be_within(1e-4).of(0.4018)
+              end
+            end
+
+            context "with method: :bootstrap" do
+              it "returns a p-value" do
+                p = LMM.likelihood_ratio_test(reduced_model, full_model, method: :bootstrap, nsim: 5)
+                expect(p).to be >=0.0
+                expect(p).to be <=1.0
+              end
             end
           end
 
@@ -762,9 +772,19 @@ describe LMM do
             #  Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
             #
 
-            it "computes the p-value correctly" do
-              p = LMM.likelihood_ratio_test(reduced_model, full_model, method: :chi2)
-              expect(p).to be_within(1e-15).of(0.0)
+            context "with method: :chi2" do
+              it "computes the p-value correctly" do
+                p = LMM.likelihood_ratio_test(reduced_model, full_model, method: :chi2)
+                expect(p).to be_within(1e-15).of(0.0)
+              end
+            end
+
+            context "with method: :bootstrap" do
+              it "returns a p-value" do
+                p = LMM.likelihood_ratio_test(reduced_model, full_model, method: :bootstrap, nsim: 5)
+                expect(p).to be >=0.0
+                expect(p).to be <=1.0
+              end
             end
 
             context "with multiple groups of random effects" do
@@ -786,9 +806,19 @@ describe LMM do
               # Compare to the results obtained in R via lme4:
               # same as last example
 
-              it "computes the p-value correctly" do
-                p = LMM.likelihood_ratio_test(alternative_reduced_model, alternative_full_model, method: :chi2)
-                expect(p).to be_within(1e-15).of(0.0)
+              context "with method: :chi2" do
+                it "computes the p-value correctly" do
+                  p = LMM.likelihood_ratio_test(alternative_reduced_model, alternative_full_model, method: :chi2)
+                  expect(p).to be_within(1e-15).of(0.0)
+                end
+              end
+
+              context "with method: :bootstrap" do
+                it "returns a p-value" do
+                  p = LMM.likelihood_ratio_test(reduced_model, full_model, method: :bootstrap, nsim: 5)
+                  expect(p).to be >=0.0
+                  expect(p).to be <=1.0
+                end
               end
             end
           end
@@ -919,6 +949,38 @@ describe LMM do
               end
 
               let(:reduced_model) { full_model.drop_ran_ef(:Age, :Location) }
+
+              it "should raise ArgumentError" do
+                expect{LMM.likelihood_ratio_test(reduced_model, full_model)}.to raise_error(ArgumentError)
+              end
+            end
+
+            context "when models were not fit to the same data" do
+              let(:full_model) do 
+                data =  Daru::DataFrame.from_csv("spec/data/alien_species.csv") 
+                case constructor_method
+                when "#from_formula"
+                  LMM.from_formula(formula: "Aggression ~ Species + (1 | Location)", 
+                                   reml: false, data: data)
+                when "#from_daru"
+                  LMM.from_daru(response: :Aggression, fixed_effects: [:Species], 
+                                random_effects: [[:intercept]], grouping: [:Location], 
+                                reml: false, data: data)
+                end
+              end
+
+              let(:reduced_model) do 
+                data =  Daru::DataFrame.from_csv("spec/data/alien_species_refit.csv") 
+                case constructor_method
+                when "#from_formula"
+                  LMM.from_formula(formula: "Aggression ~ Species + (1 | Location)", 
+                                   reml: false, data: data)
+                when "#from_daru"
+                  LMM.from_daru(response: :Aggression, fixed_effects: [:Species], 
+                                random_effects: [[:intercept]], grouping: [:Location], 
+                                reml: false, data: data)
+                end
+              end
 
               it "should raise ArgumentError" do
                 expect{LMM.likelihood_ratio_test(reduced_model, full_model)}.to raise_error(ArgumentError)
