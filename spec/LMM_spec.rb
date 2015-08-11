@@ -371,18 +371,18 @@ describe LMM do
             end
           end
 
-          context "with method: :lrt" do
-
-            let(:full_model) do 
-              case constructor_method
-              when "#from_formula"
-                LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", 
-                                 reml: false, data: df)
-              when "#from_daru"
-                LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age, :Species], 
-                              random_effects: [[:intercept, :Age]], grouping: [:Location], reml: false, data: df)
-              end
+          let(:full_model) do 
+            case constructor_method
+            when "#from_formula"
+              LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", 
+                               reml: false, data: df)
+            when "#from_daru"
+              LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age, :Species], 
+                            random_effects: [[:intercept, :Age]], grouping: [:Location], reml: false, data: df)
             end
+          end
+
+          context "with method: :lrt" do
 
             # Compare to the results obtained in R via lme4:
             #
@@ -401,6 +401,14 @@ describe LMM do
             it "computes the p-value correctly" do
               p = full_model.fix_ef_p(method: :lrt, variable: :Age) 
               expect(p).to be_within(1e-4).of(0.4018)
+            end
+          end
+
+          context "with method: :bootstrap" do
+            it "computes a p-value" do
+              p = full_model.fix_ef_p(method: :bootstrap, variable: :Age, nsim: 5) 
+              expect(p).to be <1.0
+              expect(p).to be >0.0
             end
           end
         end

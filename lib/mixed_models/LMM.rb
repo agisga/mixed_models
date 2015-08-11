@@ -495,15 +495,23 @@ class LMM
   # * +method+ - determines the method used to compute the p-values;
   #   possibilities are: +:wald+ which denotes the Wald z test; +:lrt+ which performs a
   #   likelihood ratio test based on the Chi square distribution, as delineated in section 2.4.1 in 
-  #   Pinheiro & Bates (2000);
+  #   Pinheiro & Bates (2000); +:bootstrap+ performs a simulation based likelihood ratio test,
+  #   as illustrated in 4.2.3 in Davison & Hinkley (1997);
+  #   see also LMM#likelihood_ratio_test
   # * +variable+ - denotes the fixed effects coefficient to be tested; required if and only if 
   #   +method+ is +:lrt+ or +:bootstrap+; ignored if +method+ is +:wald+
+  # * +nsim+ - (only relevant if method is +:bootstrap+) number of simulations for 
+  #   the bootstrapping; default is 1000
+  # * +parallel+ - (only relevant if method is +:bootstrap+) if true than the bootstrap
+  #   is performed in parallel using all available CPUs; default is true.
   #   
   # === References
   #
   # * J. C. Pinheiro and D. M. Bates, "Mixed Effects Models in S and S-PLUS". Springer. 2000.
+  # * A. C. Davison and D. V. Hinkley, "Bootstrap Methods and their Application". 
+  #   Cambridge Series in Statistical and Probabilistic Mathematics. 1997.
   #
-  def fix_ef_p(method: :wald, variable: nil)
+  def fix_ef_p(method: :wald, variable: nil, nsim: 1000, parallel: true)
     case method
     when :wald
       z = self.fix_ef_z
@@ -512,6 +520,9 @@ class LMM
     when :lrt
       reduced_model = self.drop_fix_ef(variable) # this will also check if variable is valid
       p = LMM.likelihood_ratio_test(reduced_model, self, method: :chi2)
+    when :bootstrap
+      reduced_model = self.drop_fix_ef(variable) # this will also check if variable is valid
+      p = LMM.likelihood_ratio_test(reduced_model, self, method: :bootstrap)
     else
       raise(NotImplementedError, "Method #{method} is currently not implemented")
     end
@@ -980,7 +991,7 @@ class LMM
   #   the p-value as the proportion of LRT statistics greater than or equal to the oberved value, as delineated
   #   in 4.2.3 in Davison & Hinkley (1997)
   # * +nsim+   - (only relevant if method is +:bootstrap+) number of simulations for 
-  #   the bootstrapping
+  #   the bootstrapping; default is 1000
   # * +parallel+ - (only relevant if method is +:bootstrap+) if true than the bootstrap
   #   is performed in parallel using all available CPUs; default is true.
   #
