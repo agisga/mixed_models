@@ -480,8 +480,9 @@ class LMM
   # Tests each fixed effects coefficient against the null hypothesis that
   # it is equal to zero, i.e. whether it is a significant predictor of the response.
   # Available methods are Wald Z test, likelihood ratio test via the Chi squared approximation,
-  # and a bootstrap based likelihood ratio test. Both types of likelihood ratio tests are
-  # available only if the model was fit via LMM#from_formula or LMM#from_daru with +reml+ set to false.
+  # and a bootstrap based likelihood ratio test (see also LMM#likelihood_ratio_test).
+  # Both types of likelihood ratio tests are available only if the model was fit 
+  # via LMM#from_formula or LMM#from_daru with +reml+ set to false.
   #
   # == Returns
   #
@@ -522,10 +523,62 @@ class LMM
       p = LMM.likelihood_ratio_test(reduced_model, self, method: :chi2)
     when :bootstrap
       reduced_model = self.drop_fix_ef(variable) # this will also check if variable is valid
-      p = LMM.likelihood_ratio_test(reduced_model, self, method: :bootstrap)
+      p = LMM.likelihood_ratio_test(reduced_model, self, method: :bootstrap,
+                                    nsim: nsim, parallel: parallel)
     else
       raise(NotImplementedError, "Method #{method} is currently not implemented")
     end
+
+    return p
+  end
+
+  # Significance test for random effects variables.
+  # Available methods are a likelihood ratio test via the Chi squared approximation,
+  # and a bootstrap based likelihood ratio test. Both types of likelihood ratio tests are
+  # available only if the model was fit via LMM#from_formula or LMM#from_daru 
+  # with +reml+ set to false (see also LMM#likelihood_ratio_test).
+  # Returned is a p-value corresponding to the random effect term +variable+.
+  #
+  # === Arguments
+  #
+  # * +method+ - determines the method used to compute the p-value;
+  #   possibilities are: +:lrt+ (default) which performs a likelihood ratio test based on the Chi square 
+  #   distribution, as delineated in section 2.4.1 in Pinheiro & Bates (2000); 
+  #   +:bootstrap+ performs a simulation based likelihood ratio test, as illustrated in 4.2.3 
+  #   in Davison & Hinkley (1997); see also LMM#likelihood_ratio_test
+  # * +variable+ - denotes the random effects coefficient to be tested
+  # * +grouping+ - the grouping variable corresponding to +variable+
+  # * +nsim+ - (only relevant if method is +:bootstrap+) number of simulations for 
+  #   the bootstrapping; default is 1000
+  # * +parallel+ - (only relevant if method is +:bootstrap+) if true than the bootstrap
+  #   is performed in parallel using all available CPUs; default is true.
+  #   
+  # === References
+  #
+  # * J. C. Pinheiro and D. M. Bates, "Mixed Effects Models in S and S-PLUS". Springer. 2000.
+  # * A. C. Davison and D. V. Hinkley, "Bootstrap Methods and their Application". 
+  #   Cambridge Series in Statistical and Probabilistic Mathematics. 1997.
+  #
+  # === Usage
+  #
+  #   df = Daru::DataFrame.from_csv "alien_species.csv"
+  #   model = LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", 
+  #                            reml: false, data: df)
+  #   p = model.ran_ef_p(variable: :Age, grouping: :Location) 
+  #            
+  def ran_ef_p(method: :lrt, variable:, grouping:, nsim: 1000, parallel: true)
+    # this will also check if variable and grouping are valid
+    reduced_model = self.drop_ran_ef(variable, grouping) 
+
+    p = case method
+        when :lrt
+          LMM.likelihood_ratio_test(reduced_model, self, method: :chi2)
+        when :bootstrap
+          LMM.likelihood_ratio_test(reduced_model, self, method: :bootstrap,
+                                    nsim: nsim, parallel: parallel)
+        else
+          raise(NotImplementedError, "Method #{method} is currently not implemented")
+        end
 
     return p
   end
@@ -911,6 +964,13 @@ class LMM
   # * +start_point+ - (optional) since the same starting point can not be used in the optimization algorithm 
   #   to fit a model with fewer random effects, a new starting point can be provided with this argument
   #
+  # === Usage
+  #
+  #   df = Daru::DataFrame.from_csv "alien_species.csv"
+  #   model = LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", 
+  #                            reml: false, data: df)
+  #   reduced_model = model.drop_ran_ef(:Age, :Location)
+  #            
   def drop_ran_ef(variable, grouping, start_point: nil)
     raise(NotImplementedError, "LMM#drop_ran_ef does not work if the model was not fit using a Daru::DataFrame") if @from_daru_args.nil?
     raise(ArgumentError, "grouping is not one of grouping variables in the linear mixed model") unless @from_daru_args[:grouping].include? grouping

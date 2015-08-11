@@ -413,6 +413,54 @@ describe LMM do
           end
         end
 
+        describe "#ran_ef_p" do
+          # Essentially this is equivalent to #likelihood_ratio_test. So, more extensive
+          # tests can be found there.
+
+          let(:full_model) do 
+            case constructor_method
+            when "#from_formula"
+              LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", 
+                               reml: false, data: df)
+            when "#from_daru"
+              LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age, :Species], 
+                            random_effects: [[:intercept, :Age]], grouping: [:Location], reml: false, data: df)
+            end
+          end
+
+          # Compare to the results obtained in R via lme4:
+          #
+          #  > full = lmer(Aggression ~ Age + Species + (Age | Location), df, REML=FALSE)
+          #  > reduced = lmer(Aggression ~ Age + Species + (1 | Location), df, REML=FALSE)
+          #  > anova(full, reduced)
+          #  Data: df
+          #  Models:
+          #  reduced: Aggression ~ Age + Species + (1 | Location)
+          #  full: Aggression ~ Age + Species + (Age | Location)
+          #          Df    AIC    BIC  logLik deviance  Chisq Chi Df Pr(>Chisq)    
+          #  reduced  7 777.85 796.09 -381.93   763.85                             
+          #  full     9 355.57 379.01 -168.78   337.57 426.29      2  < 2.2e-16 ***
+          #  ---
+          #  Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+          #
+
+          context "with method: :lrt" do
+            it "computes the p-value correctly" do
+              p = full_model.ran_ef_p(method: :lrt, variable: :Age, grouping: :Location) 
+              expect(p).to be_within(1e-15).of(0.0)
+            end
+          end
+
+          context "with method: :bootstrap" do
+            it "computes a p-value" do
+              p = full_model.ran_ef_p(method: :bootstrap, variable: :Age, 
+                                      grouping: :Location, nsim: 5) 
+              expect(p).to be <1.0
+              expect(p).to be >0.0
+            end
+          end
+        end
+
         describe "#fix_ef_conf_int" do
           context "with method: :wald" do
             it "computes 95% confidence intervals for the fixed effects correctly" do
