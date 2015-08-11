@@ -477,21 +477,41 @@ class LMM
     return z
   end
 
-  # Returns a Hash containing the p-values of the fixed effects coefficient.
+  # Tests each fixed effects coefficient against the null hypothesis that
+  # it is equal to zero, i.e. whether it is a significant predictor of the response.
+  # Available methods are Wald Z test, likelihood ratio test via the Chi squared approximation,
+  # and a bootstrap based likelihood ratio test. Both types of likelihood ratio tests are
+  # available only if the model was fit via LMM#from_formula or LMM#from_daru with +reml+ set to false.
+  #
+  # == Returns
+  #
+  # * a Hash containing the p-values for all fixed effects coefficients, 
+  #   if +method+ is +:wald+
+  # * a p-value corresponding to the fixed effect coefficient +variable+, 
+  #   if +method+ is +:lrt+ or +:bootstrap+
   #
   # === Arguments
   #
   # * +method+ - determines the method used to compute the p-values;
-  #   default and currently the only possibility is +:wald+,
-  #   which denotes the Wald z test
+  #   possibilities are: +:wald+ which denotes the Wald z test; +:lrt+ which performs a
+  #   likelihood ratio test based on the Chi square distribution, as delineated in section 2.4.1 in 
+  #   Pinheiro & Bates (2000);
+  # * +variable+ - denotes the fixed effects coefficient to be tested; required if and only if 
+  #   +method+ is +:lrt+ or +:bootstrap+; ignored if +method+ is +:wald+
+  #   
+  # === References
   #
-  def fix_ef_p(method: :wald)
-    p = Hash.new
-
+  # * J. C. Pinheiro and D. M. Bates, "Mixed Effects Models in S and S-PLUS". Springer. 2000.
+  #
+  def fix_ef_p(method: :wald, variable: nil)
     case method
     when :wald
       z = self.fix_ef_z
+      p = Hash.new
       z.each_key { |k| p[k] = 2.0*(1.0 - Distribution::Normal.cdf(z[k].abs)) }
+    when :lrt
+      reduced_model = self.drop_fix_ef(variable) # this will also check if variable is valid
+      p = LMM.likelihood_ratio_test(reduced_model, self, method: :chi2)
     else
       raise(NotImplementedError, "Method #{method} is currently not implemented")
     end

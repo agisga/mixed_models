@@ -358,7 +358,7 @@ describe LMM do
 
         describe "#fix_ef_p" do
           context "with method: :wald" do
-            it "computes the p-values from the Wald test correctly" do
+            it "computes the p-values correctly" do
               result_from_R = [0.0, 0.4673875, 0.0, 0.0, 0.0]
               result = model_fit.fix_ef_p(method: :wald).values
               result.each_index do |k| 
@@ -368,6 +368,39 @@ describe LMM do
                   expect(result[k]/result_from_R[k]).to be_within(1e-4).of(1.0)
                 end
               end
+            end
+          end
+
+          context "with method: :lrt" do
+
+            let(:full_model) do 
+              case constructor_method
+              when "#from_formula"
+                LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", 
+                                 reml: false, data: df)
+              when "#from_daru"
+                LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age, :Species], 
+                              random_effects: [[:intercept, :Age]], grouping: [:Location], reml: false, data: df)
+              end
+            end
+
+            # Compare to the results obtained in R via lme4:
+            #
+            #  > full = lmer(Aggression ~ Age + Species + (Age | Location), df, REML=FALSE)
+            #  > reduced = lmer(Aggression ~ Species + (Age | Location), df, REML=FALSE)
+            #  > anova(full, reduced)
+            #  Data: df
+            #  Models:
+            #  reduced: Aggression ~ Species + (Age | Location)
+            #  full: Aggression ~ Age + Species + (Age | Location)
+            #          Df    AIC    BIC  logLik deviance Chisq Chi Df Pr(>Chisq)
+            #  reduced  8 354.27 375.11 -169.13   338.27                        
+            #  full     9 355.57 379.01 -168.78   337.57 0.703      1     0.4018
+            #
+
+            it "computes the p-value correctly" do
+              p = full_model.fix_ef_p(method: :lrt, variable: :Age) 
+              expect(p).to be_within(1e-4).of(0.4018)
             end
           end
         end
