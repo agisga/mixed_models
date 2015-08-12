@@ -560,59 +560,6 @@ class LMM
 
   alias fix_ef_test fix_ef_p
 
-  # Significance test for random effects variables.
-  # Available methods are a likelihood ratio test via the Chi squared approximation,
-  # and a bootstrap based likelihood ratio test. Both types of likelihood ratio tests are
-  # available only if the model was fit via LMM#from_formula or LMM#from_daru 
-  # with +reml+ set to false (see also LMM#likelihood_ratio_test).
-  # Returned is a p-value corresponding to the random effect term +variable+.
-  #
-  # === Arguments
-  #
-  # * +method+ - determines the method used to compute the p-value;
-  #   possibilities are: +:lrt+ (default) which performs a likelihood ratio test based on the Chi square 
-  #   distribution, as delineated in section 2.4.1 in Pinheiro & Bates (2000); 
-  #   +:bootstrap+ performs a simulation based likelihood ratio test, as illustrated in 4.2.3 
-  #   in Davison & Hinkley (1997); see also LMM#likelihood_ratio_test
-  # * +variable+ - denotes the random effects coefficient to be tested
-  # * +grouping+ - the grouping variable corresponding to +variable+
-  # * +nsim+ - (only relevant if method is +:bootstrap+) number of simulations for 
-  #   the bootstrapping; default is 1000
-  # * +parallel+ - (only relevant if method is +:bootstrap+) if true than the bootstrap
-  #   is performed in parallel using all available CPUs; default is true.
-  #   
-  # === References
-  #
-  # * J. C. Pinheiro and D. M. Bates, "Mixed Effects Models in S and S-PLUS". Springer. 2000.
-  # * A. C. Davison and D. V. Hinkley, "Bootstrap Methods and their Application". 
-  #   Cambridge Series in Statistical and Probabilistic Mathematics. 1997.
-  #
-  # === Usage
-  #
-  #   df = Daru::DataFrame.from_csv "alien_species.csv"
-  #   model = LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", 
-  #                            reml: false, data: df)
-  #   p = model.ran_ef_p(variable: :Age, grouping: :Location) 
-  #            
-  def ran_ef_p(method: :lrt, variable:, grouping:, nsim: 1000, parallel: true)
-    # this will also check if variable and grouping are valid
-    reduced_model = self.drop_ran_ef(variable, grouping) 
-
-    p = case method
-        when :lrt
-          LMM.likelihood_ratio_test(reduced_model, self, method: :chi2)
-        when :bootstrap
-          LMM.likelihood_ratio_test(reduced_model, self, method: :bootstrap,
-                                    nsim: nsim, parallel: parallel)
-        else
-          raise(NotImplementedError, "Method #{method} is currently not implemented")
-        end
-
-    return p
-  end
-
-  alias ran_ef_test ran_ef_p
-
   # Returns a Hash containing the confidence intervals of the fixed effects coefficients.
   #
   # === Arguments
@@ -772,7 +719,145 @@ class LMM
     return conf_int
   end
 
-  # Conditional variance-covariance matrix of the random effects estimates, based on
+  # Estimates of the variances and covariances of the random effects.
+  # If the model was fit via #from_formula or #from_daru, then a Daru::DatFrame with rows 
+  # and columns named according to the random effects, containing all random effects variances
+  # and covariances is returned.
+  # If the model was fit from raw model matrices via #initialize, then the covariance matrix
+  # of the random effects vector is returned as a NMatrix object.
+  # This is mainly an auxilliary function for #ran_ef_summary.
+  #
+  def ran_ef_cov
+    # when the model was fit from raw matrices with a custom argument thfun
+    return @sigma_mat if @from_daru_args.nil?
+
+    # when the model was fit from a Daru::DataFrame
+    grp = @from_daru_args[:grouping]
+    re  = @from_daru_args[:random_effects]
+
+    # get names for the rows and columns of the returned data frame
+    get_name = Proc.new do |i,j|
+      if re[i][j] == :intercept then
+        "#{grp[i]}".to_sym
+      else
+        "#{grp[i]}_#{re[i][j]}".to_sym
+      end
+    end
+    names = []
+    grp.each_index do |i|
+      re[i].each_index do |j|
+        names << get_name.call(i,j)
+      end
+    end
+
+    # generate the data frame to be returned, yet filled with zeros
+    zeros = Array.new(names.length) { Array.new(names.length) {0} }
+    varcov = Daru::DataFrame.new(zeros, order: names, index: names)
+
+    # fill the data frame
+    block_position = 0 # position of the analyzed block in the block-diagonal sigma_mat
+    grp.each_index do |i|
+      re[i].each_index do |j|
+        name1 = get_name.call(i,j)
+        re[i].each_index do |k|
+          name2 = get_name.call(i,k)
+          varcov[name1][name2] = @sigma_mat[block_position + j, block_position + k]
+        end
+      end
+      block_position += grp[i].length * re[i].length
+    end
+
+    return varcov
+  end
+
+  # Estimates of the standard deviations and correlations of the random effects.
+  # If the model was fit via #from_formula or #from_daru, then a Daru::DatFrame with rows 
+  # and columns named according to the random effects, containing all random effects variances
+  # and covariances is returned.
+  # If the model was fit from raw model matrices via #initialize, then the correlation matrix
+  # of the random effects vector is returned as a NMatrix object.
+  #
+  def ran_ef_summary
+    varcov = self.ran_ef_cov
+    varcov = varcov.to_nm if @from_daru_args
+
+    # turn covariance matrix varcov into a correlation matrix
+    q = varcov.shape[0]
+    q.times { |i| varcov[i,i] = Math::sqrt(varcov[i,i]) }
+    q.times do |i|
+      q.times do |j|
+        varcov[i,j] = varcov[i,j] / (varcov[i,i] * varcov[j,j]) if i != j
+      end
+    end
+
+    # store the results in a data frame if necessary
+    if @from_daru_args then
+      corr = self.ran_ef_cov
+      q.times { |i| q.times { |j| corr[i][j] = varcov[i,j] } }
+    else
+      corr = varcov
+    end
+
+    return corr
+  end
+      
+  alias ran_ef_cor ran_ef_summary
+  alias ran_ef_corr ran_ef_summary
+
+  # Significance test for random effects variables.
+  # Available methods are a likelihood ratio test via the Chi squared approximation,
+  # and a bootstrap based likelihood ratio test. Both types of likelihood ratio tests are
+  # available only if the model was fit via LMM#from_formula or LMM#from_daru 
+  # with +reml+ set to false (see also LMM#likelihood_ratio_test).
+  # Returned is a p-value corresponding to the random effect term +variable+.
+  #
+  # === Arguments
+  #
+  # * +method+ - determines the method used to compute the p-value;
+  #   possibilities are: +:lrt+ (default) which performs a likelihood ratio test based on the Chi square 
+  #   distribution, as delineated in section 2.4.1 in Pinheiro & Bates (2000); 
+  #   +:bootstrap+ performs a simulation based likelihood ratio test, as illustrated in 4.2.3 
+  #   in Davison & Hinkley (1997); see also LMM#likelihood_ratio_test
+  # * +variable+ - denotes the random effects coefficient to be tested
+  # * +grouping+ - the grouping variable corresponding to +variable+
+  # * +nsim+ - (only relevant if method is +:bootstrap+) number of simulations for 
+  #   the bootstrapping; default is 1000
+  # * +parallel+ - (only relevant if method is +:bootstrap+) if true than the bootstrap
+  #   is performed in parallel using all available CPUs; default is true.
+  #   
+  # === References
+  #
+  # * J. C. Pinheiro and D. M. Bates, "Mixed Effects Models in S and S-PLUS". Springer. 2000.
+  # * A. C. Davison and D. V. Hinkley, "Bootstrap Methods and their Application". 
+  #   Cambridge Series in Statistical and Probabilistic Mathematics. 1997.
+  #
+  # === Usage
+  #
+  #   df = Daru::DataFrame.from_csv "alien_species.csv"
+  #   model = LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", 
+  #                            reml: false, data: df)
+  #   p = model.ran_ef_p(variable: :Age, grouping: :Location) 
+  #            
+  def ran_ef_p(method: :lrt, variable:, grouping:, nsim: 1000, parallel: true)
+    # this will also check if variable and grouping are valid
+    reduced_model = self.drop_ran_ef(variable, grouping) 
+
+    p = case method
+        when :lrt
+          LMM.likelihood_ratio_test(reduced_model, self, method: :chi2)
+        when :bootstrap
+          LMM.likelihood_ratio_test(reduced_model, self, method: :bootstrap,
+                                    nsim: nsim, parallel: parallel)
+        else
+          raise(NotImplementedError, "Method #{method} is currently not implemented")
+        end
+
+    return p
+  end
+
+  alias ran_ef_test ran_ef_p
+
+  # Conditional variance-covariance matrix of the random effects *estimates*, based on
   # the assumption that the fixed effects vector beta, the covariance factor Lambda(theta)
   # and the scaling factor sigma are known (i.e. not random; the corresponding estimates are 
   # used as "true" values), as given in equation (58) in Bates et. al. (2014).

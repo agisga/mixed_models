@@ -207,6 +207,13 @@ describe LMM do
         #
         #  > mod <- lmer(Aggression~Age+Species+(Age|Location), data=alien.species)
         #  
+        #  # estimated covariance structure
+        #  > VarCorr(mod)
+        #   Groups   Name        Std.Dev.  Corr  
+        #   Location (Intercept) 104.19820       
+        #            Age           0.15566 -0.060
+        #   Residual               0.97453       
+        #
         #  # predictions
         #  > newdata <- read.table("alien_species_newdata.csv",sep=",", header=T)
         #  > predict(mod, newdata)
@@ -282,6 +289,16 @@ describe LMM do
         #  [1] 351.7155
         #  > BIC(mod)
         #  [1] 375.1621
+
+        describe "#ran_ef_summary" do
+          it "computes the standard deviations and correlations of random effects correctly" do
+            corr = model_fit.ran_ef_summary
+            expect(corr[:Location][:Location]).to be_within(0.1).of(104.19820)
+            expect(corr[:Location_Age][:Location_Age]).to be_within(1e-4).of(0.15566) 
+            expect(corr[:Location][:Location_Age]).to be_within(1e-3).of(-0.060)
+            expect(corr[:Location_Age][:Location]).to be_within(1e-3).of(-0.060)
+          end
+        end
 
         describe "#aic" do
           it "computes the Akaike information criterion correctly" do
@@ -423,8 +440,8 @@ describe LMM do
           context "with method: :bootstrap" do
             it "computes a p-value" do
               p = full_model.fix_ef_p(method: :bootstrap, variable: :Age, nsim: 5) 
-              expect(p).to be <1.0
-              expect(p).to be >0.0
+              expect(p).to be <=1.0
+              expect(p).to be >=0.0
             end
           end
 
@@ -485,8 +502,8 @@ describe LMM do
             it "computes a p-value" do
               p = full_model.ran_ef_p(method: :bootstrap, variable: :Age, 
                                       grouping: :Location, nsim: 5) 
-              expect(p).to be <1.0
-              expect(p).to be >0.0
+              expect(p).to be <=1.0
+              expect(p).to be >=0.0
             end
           end
 
@@ -1350,6 +1367,19 @@ describe LMM do
 
       it "estimates the correlation of random intercept and slope correctly" do
         expect(model_fit.sigma_mat[0,1] / (intercept_sd * slope_sd)).to be_within(1e-2).of(-0.23)
+      end
+    end
+
+    describe "#ran_ef_summary" do
+      it "estimates the random effects correlation matrix correctly" do
+        tmpmat = NMatrix.new([2,2], [3.9259, -0.23, -0.23, 0.4244], dtype: :float64)
+        blockmat = NMatrix.block_diagonal(*Array.new(5) {tmpmat})
+        corrmat = model_fit.ran_ef_summary
+        10.times do |i|
+          10.times do |j|
+            expect(corrmat[i,j]).to be_within(1e-2).of(blockmat[i,j])
+          end
+        end
       end
     end
 
