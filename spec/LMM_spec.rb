@@ -298,6 +298,36 @@ describe LMM do
             expect(corr[:Location][:Location_Age]).to be_within(1e-3).of(-0.060)
             expect(corr[:Location_Age][:Location]).to be_within(1e-3).of(-0.060)
           end
+
+          context "with multiple groups of random effects" do
+
+            let(:new_model) do 
+              case constructor_method
+              when "#from_formula"
+                LMM.from_formula(formula: "Aggression ~ Age + (1 | Species) + (0 + Age | Location)", data: df)
+              when "#from_daru"
+                LMM.from_daru(response: :Aggression, fixed_effects: [:intercept, :Age], 
+                              random_effects: [[:intercept], [:Age]], grouping: [:Species, :Location], data: df)
+              end
+            end
+
+            # Results form lme4 in R:
+            #
+            #  > mod = lmer(Aggression ~ Age + (1 | Species) + (0 + Age | Location), df)
+            #  > VarCorr(mod)
+            #   Groups   Name        Std.Dev. 
+            #   Species  (Intercept) 384.92835
+            #   Location Age           0.52388
+            #   Residual              40.05492
+
+            it "computes the standard deviations and correlations of random effects correctly" do
+              corr = new_model.ran_ef_summary
+              expect(corr[:Species][:Species]).to be_within(0.1).of(384.92835)
+              expect(corr[:Location_Age][:Location_Age]).to be_within(1e-3).of(0.52388) 
+              expect(corr[:Species][:Location_Age]).to eq(nil)
+              expect(corr[:Location_Age][:Species]).to eq(nil)
+            end
+          end
         end
 
         describe "#aic" do

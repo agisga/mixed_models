@@ -728,12 +728,24 @@ class LMM
   # This is mainly an auxilliary function for #ran_ef_summary.
   #
   def ran_ef_cov
+    ########################################################################
     # when the model was fit from raw matrices with a custom argument thfun
+    ########################################################################
+
     return @sigma_mat if @from_daru_args.nil?
 
+    ################################################
     # when the model was fit from a Daru::DataFrame
+    ################################################
+    
     grp = @from_daru_args[:grouping]
-    re  = @from_daru_args[:random_effects]
+    re  = Marshal.load(Marshal.dump(@from_daru_args[:random_effects]))
+    re.each do |ef|
+      if ef.include? :no_intercept then
+        ef.delete(:intercept)
+        ef.delete(:no_intercept)
+      end
+    end
 
     # get names for the rows and columns of the returned data frame
     get_name = Proc.new do |i,j|
@@ -750,9 +762,9 @@ class LMM
       end
     end
 
-    # generate the data frame to be returned, yet filled with zeros
-    zeros = Array.new(names.length) { Array.new(names.length) {0} }
-    varcov = Daru::DataFrame.new(zeros, order: names, index: names)
+    # generate the data frame to be returned, yet filled with nil's 
+    nils = Array.new(names.length) { Array.new(names.length) {nil} }
+    varcov = Daru::DataFrame.new(nils, order: names, index: names)
 
     # fill the data frame
     block_position = 0 # position of the analyzed block in the block-diagonal sigma_mat
@@ -764,7 +776,8 @@ class LMM
           varcov[name1][name2] = @sigma_mat[block_position + j, block_position + k]
         end
       end
-      block_position += grp[i].length * re[i].length
+      num_grp_levels = @from_daru_args[:data][grp[i]].uniq.size
+      block_position += num_grp_levels * re[i].length
     end
 
     return varcov
@@ -779,26 +792,31 @@ class LMM
   #
   def ran_ef_summary
     varcov = self.ran_ef_cov
-    varcov = varcov.to_nm if @from_daru_args
 
-    # turn covariance matrix varcov into a correlation matrix
-    q = varcov.shape[0]
-    q.times { |i| varcov[i,i] = Math::sqrt(varcov[i,i]) }
-    q.times do |i|
-      q.times do |j|
-        varcov[i,j] = varcov[i,j] / (varcov[i,i] * varcov[j,j]) if i != j
+    if @from_daru_args then
+      # when the model was fit from a Daru::DataFrame
+      # turn data frame of covariances into data frame of correlations
+      q = varcov.nrows
+      q.times { |i| varcov[i][i] = Math::sqrt(varcov[i][i]) }
+      q.times do |i|
+        q.times do |j|
+          # do for i != j if varcov is not nil
+          varcov[i][j] = varcov[i][j] / (varcov[i][i] * varcov[j][j]) if i != j && varcov[i][j]
+        end
+      end
+    else
+      # when the model was fit from raw matrices with a custom argument thfun
+      # turn covariance matrix varcov into a correlation matrix
+      q = varcov.shape[0]
+      q.times { |i| varcov[i,i] = Math::sqrt(varcov[i,i]) }
+      q.times do |i|
+        q.times do |j|
+          varcov[i,j] = varcov[i,j] / (varcov[i,i] * varcov[j,j]) if i != j
+        end
       end
     end
 
-    # store the results in a data frame if necessary
-    if @from_daru_args then
-      corr = self.ran_ef_cov
-      q.times { |i| q.times { |j| corr[i][j] = varcov[i,j] } }
-    else
-      corr = varcov
-    end
-
-    return corr
+    return varcov 
   end
       
   alias ran_ef_cor ran_ef_summary
