@@ -476,7 +476,8 @@ class LMM
   # estimates, the standard deviations of the fixed effects coefficient estimates, the
   # corresponding z statistics (or z-score, or equivalently t statistics), and the corresponding 
   # Wald-Z p-values testing for each fixed effects term the null hypothesis that the true 
-  # coefficient is equal to zero.
+  # coefficient is equal to zero. The rows of the data frame correspond the fixed effects
+  # coefficients and are named accordingly.
   # See also #fix_ef, #fix_ef_sd, #fix_ef_z, #fix_ef_p, #fix_ef_test, #likelihood_ratio_test.
   #
   # === Usage
@@ -499,7 +500,8 @@ class LMM
     z_vec = Daru::Vector.new self.fix_ef_z
     p_vec = Daru::Vector.new self.fix_ef_p(method: :wald)
     
-    return Daru::DataFrame.new([coef_vec, sd_vec, z_vec, p_vec], order: [:coef, :sd, :z_score, :WaldZ_p_value])
+    return Daru::DataFrame.new([coef_vec, sd_vec, z_vec, p_vec], 
+                               order: [:coef, :sd, :z_score, :WaldZ_p_value])
   end
 
   # Variance-covariance matrix of the estimates of the fixed effects terms, conditional on the
