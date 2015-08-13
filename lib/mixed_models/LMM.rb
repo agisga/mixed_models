@@ -472,6 +472,36 @@ class LMM
     return bic
   end
 
+  # Returns a Daru::DataFrame object containing in it's columns the fixed effect coefficient 
+  # estimates, the standard deviations of the fixed effects coefficient estimates, the
+  # corresponding z statistics (or z-score, or equivalently t statistics), and the corresponding 
+  # Wald-Z p-values testing for each fixed effects term the null hypothesis that the true 
+  # coefficient is equal to zero.
+  # See also #fix_ef, #fix_ef_sd, #fix_ef_z, #fix_ef_p, #fix_ef_test, #likelihood_ratio_test.
+  #
+  # === Usage
+  #
+  #  > df = Daru::DataFrame.from_csv "spec/data/alien_species.csv"
+  #  > mod = LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", data: df)
+  #  > puts mod.fix_ef_summary.inspect(24)
+  # 
+  #  #<Daru::DataFrame:69819740843180 @name = 6a13d7f0-d16a-4da9-a199-3a320a8ffc59 @size = 5>
+  #                                               coef                       sd                  z_score            WaldZ_p_value 
+  #                 intercept       1016.2867207696772        60.19727495932258       16.882603431075875                      0.0 
+  #                       Age     -0.06531615343467667      0.08988486367253856      -0.7266646548258817       0.4674314106158888 
+  #         Species_lvl_Human        -499.693695290209       0.2682523406941927      -1862.7747813759402                      0.0 
+  #           Species_lvl_Ood       -899.5693213535769       0.2814470814004366      -3196.2289922406044                      0.0 
+  #  Species_lvl_WeepingAngel      -199.58895804200762       0.2757835779525997       -723.7158917283754                      0.0
+  #
+  def fix_ef_summary
+    coef_vec = Daru::Vector.new @fix_ef
+    sd_vec = Daru::Vector.new self.fix_ef_sd
+    z_vec = Daru::Vector.new self.fix_ef_z
+    p_vec = Daru::Vector.new self.fix_ef_p(method: :wald)
+    
+    return Daru::DataFrame.new([coef_vec, sd_vec, z_vec, p_vec], order: [:coef, :sd, :z_score, :WaldZ_p_value])
+  end
+
   # Variance-covariance matrix of the estimates of the fixed effects terms, conditional on the
   # estimated covariance parameters, as given in equation (54) in Bates et. al. (2014).
   #

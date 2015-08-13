@@ -289,6 +289,41 @@ describe LMM do
         #  [1] 351.7155
         #  > BIC(mod)
         #  [1] 375.1621
+        #
+
+        describe "#fix_ef_summary" do
+          let(:summary) { model_fit.fix_ef_summary }
+
+          it "returns the correct coefficient estimates" do
+            result_from_R = [1016.2867, -0.06532, -499.6937, -899.5693, -199.5890] 
+            result = summary[:coef].to_a
+            result.each_index { |k| expect(result[k]).to be_within(1e-4).of(result_from_R[k]) }
+          end
+
+          it "returns the correct standard deviations" do
+            result_from_R = [60.15942377, 0.08987599, 0.26825658, 0.28145153, 0.27578794]
+            result = summary[:sd].to_a
+            result.each_index { |i| expect(result[i]/result_from_R[i]).to be_within(1e-2).of(1.0) }
+          end
+
+          it "returns the correct z scores" do
+            result_from_R = [16.8932256, -0.7267364, -1862.7453318, -3196.1784666, -723.7044506]
+            result = summary[:z_score].to_a 
+            result.each_index { |k| expect(result[k]/result_from_R[k]).to be_within(1e-3).of(1.0) }
+          end
+
+          it "returns the correct p-values" do
+            result_from_R = [0.0, 0.4673875, 0.0, 0.0, 0.0]
+            result = summary[:WaldZ_p_value].to_a
+            result.each_index do |k| 
+              if result_from_R[k] == 0 then
+                expect(result[k]).to eq(0)
+              else
+                expect(result[k]/result_from_R[k]).to be_within(1e-4).of(1.0)
+              end
+            end
+          end
+        end
 
         describe "#ran_ef_summary" do
           it "computes the standard deviations and correlations of random effects correctly" do
@@ -1397,6 +1432,28 @@ describe LMM do
 
       it "estimates the correlation of random intercept and slope correctly" do
         expect(model_fit.sigma_mat[0,1] / (intercept_sd * slope_sd)).to be_within(1e-2).of(-0.23)
+      end
+    end
+
+    describe "#fix_ef_summary" do
+      let(:summary) { model_fit.fix_ef_summary }
+
+      it "returns the correct coefficient estimates" do
+        result_from_R = [2.7998, 1.1004]
+        result = summary[:coef].to_a
+        result.each_index { |k| expect(result[k]).to be_within(1e-2).of(result_from_R[k]) }
+      end
+
+      it "returns the correct standard deviations" do
+        result_from_R = [2.0484, 0.1938]
+        result = summary[:sd].to_a
+        result.each_index { |i| expect(result[i]/result_from_R[i]).to be_within(1e-2).of(1.0) }
+      end
+
+      it "returns the correct z scores" do
+        result_from_R = [1.367, 5.679]
+        result = summary[:z_score].to_a 
+        result.each_index { |k| expect(result[k]/result_from_R[k]).to be_within(1e-2).of(1.0) }
       end
     end
 
