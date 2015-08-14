@@ -1191,7 +1191,7 @@ class LMM
   #
   # === References
   # 
-  # * J. C. Pinheiro and D. M. Bates, "Mixed Effects Models in S and S-PLUS", Springer, 2000.
+  # * J C Pinheiro and D M Bates, "Mixed Effects Models in S and S-PLUS", Springer, 2000.
   #
   def LMM.likelihood_ratio(model1, model2)
     # compute the likelihood ratio as in 2.4.1 in Pinheiro & Bates (2000)
