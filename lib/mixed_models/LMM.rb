@@ -1,7 +1,7 @@
 # Copyright (c) 2015 Alexej Gossmann 
  
 # Linear mixed effects models.
-# The implementation is based on Bates et al. (2014)
+# The implementation of the model fitting algorithm is based on Bates et al. (2014)
 #
 # === References
 # 
@@ -451,7 +451,7 @@ class LMM
   #
   # === References
   #
-  # * J. C. Pinheiro and D. M. Bates, "Mixed Effects Models in S and S-PLUS". Springer. 2000.
+  # * J C Pinheiro and D M Bates, "Mixed Effects Models in S and S-PLUS". Springer. 2000.
   #
   def aic
     num_param = @fix_ef.length + self.theta.length + 1
@@ -464,7 +464,7 @@ class LMM
   #
   # === References
   #
-  # * J. C. Pinheiro and D. M. Bates, "Mixed Effects Models in S and S-PLUS". Springer. 2000.
+  # * J C Pinheiro and D M Bates, "Mixed Effects Models in S and S-PLUS". Springer. 2000.
   #
   def bic
     num_param = @fix_ef.length + self.theta.length + 1
@@ -566,8 +566,8 @@ class LMM
   #   
   # === References
   #
-  # * J. C. Pinheiro and D. M. Bates, "Mixed Effects Models in S and S-PLUS". Springer. 2000.
-  # * A. C. Davison and D. V. Hinkley, "Bootstrap Methods and their Application". 
+  # * J C Pinheiro and D M Bates, "Mixed Effects Models in S and S-PLUS". Springer. 2000.
+  # * A C Davison and D V Hinkley, "Bootstrap Methods and their Application". 
   #   Cambridge Series in Statistical and Probabilistic Mathematics. 1997.
   #
   def fix_ef_p(method: :wald, variable: nil, nsim: 1000, parallel: true)
@@ -621,7 +621,7 @@ class LMM
   #
   # === References
   #
-  # * A. C. Davison and D. V. Hinkley, Bootstrap Methods and their Application. 
+  # * A C Davison and D V Hinkley, Bootstrap Methods and their Application. 
   #   Cambridge Series in Statistical and Probabilistic Mathematics. 1997.
   #
   def fix_ef_conf_int(level: 0.95, method: :wald, boottype: :studentized, nsim: 1000, parallel: true)
@@ -877,8 +877,8 @@ class LMM
   #   
   # === References
   #
-  # * J. C. Pinheiro and D. M. Bates, "Mixed Effects Models in S and S-PLUS". Springer. 2000.
-  # * A. C. Davison and D. V. Hinkley, "Bootstrap Methods and their Application". 
+  # * J C Pinheiro and D M Bates, "Mixed Effects Models in S and S-PLUS". Springer. 2000.
+  # * A C Davison and D V Hinkley, "Bootstrap Methods and their Application". 
   #   Cambridge Series in Statistical and Probabilistic Mathematics. 1997.
   #
   # === Usage
@@ -1222,8 +1222,8 @@ class LMM
   #
   # === References
   # 
-  # * Section 2.4.1 in J. C. Pinheiro and D. M. Bates, "Mixed Effects Models in S and S-PLUS". Springer. 2000.
-  # * Section 4.2.3 in A. C. Davison and D. V. Hinkley, "Bootstrap Methods and their Application". 
+  # * J C Pinheiro and D M Bates, "Mixed Effects Models in S and S-PLUS". Springer. 2000.
+  # * A C Davison and D V Hinkley, "Bootstrap Methods and their Application". 
   #   Cambridge Series in Statistical and Probabilistic Mathematics. 1997.
   #
   def LMM.likelihood_ratio_test(model1, model2, method: :chi2, nsim: 1000, parallel: true)
