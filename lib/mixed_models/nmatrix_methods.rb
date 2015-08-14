@@ -1,3 +1,5 @@
+# Copyright (c) 2015 Alexej Gossmann 
+
 class NMatrix
 
   # Compute the the Kronecker product of two row vectors (NMatrix of shape [1,n])

@@ -1,3 +1,5 @@
+# Copyright (c) 2015 Alexej Gossmann 
+
 module Daru
   class DataFrame
     # Transform a Daru::DataFrame into a NMatrix

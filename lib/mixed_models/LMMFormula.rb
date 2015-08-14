@@ -60,18 +60,35 @@ module MixedModels
       lmm_from_daru_input[:fixed_effects]  = Array.new
       lmm_from_daru_input[:random_effects] = Array.new
       lmm_from_daru_input[:grouping]       = Array.new
+
       @content.each do |item|
         if item.is_a?(Symbol) then
           lmm_from_daru_input[:fixed_effects].push(item)
         elsif item.is_a?(Array) then
-          c = item.clone # in order to keep @content unchanged
+          c = Marshal.load(Marshal.dump(item)) # in order to keep @content unchanged
+
           if c[0] == "interaction_effect" then
             c.shift
             raise "bi-variate interaction effects allowed only" unless c.length == 2
             lmm_from_daru_input[:fixed_effects].push(c)
+
           elsif c[0] == "random_effect" then
             c.shift
-            lmm_from_daru_input[:grouping].push(c.pop)
+
+            # get grouping structure
+            grp = c.pop
+            case
+            when grp.is_a?(Symbol)
+              lmm_from_daru_input[:grouping].push(grp)
+            when grp.is_a?(Array) && grp[0] == "interaction_effect"
+              grp.shift
+              raise "bi-variate nested effects allowed only" unless grp.length == 2
+              lmm_from_daru_input[:grouping].push(grp)
+            else
+              raise "invalid formulation of the random effects grouping structure in LMMFormula"
+            end
+
+            # get random effects terms
             ran_ef = Array.new
             c.each do |cc|
               case
@@ -86,6 +103,7 @@ module MixedModels
               end
             end
             lmm_from_daru_input[:random_effects].push(ran_ef)
+
           else
             raise "invalid formulation of LMMFormula.content"
           end
@@ -93,6 +111,7 @@ module MixedModels
           raise "invalid formulation of LMMFormula.content"
         end
       end
+
       return lmm_from_daru_input
     end
   end

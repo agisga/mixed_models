@@ -6,7 +6,7 @@ require 'mixed_models/version.rb'
 Gem::Specification.new do |spec|
   spec.name          = "mixed_models"
   spec.version       = MixedModels::VERSION
-  spec.authors       = ["agisga"]
+  spec.authors       = ["Alexej Gossmann"]
   spec.email         = ["alexej.go@googlemail.com"]
 
   spec.summary       = %q{Mixed effects models in Ruby}
