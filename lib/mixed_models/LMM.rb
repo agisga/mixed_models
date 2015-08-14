@@ -769,9 +769,25 @@ class LMM
     ################################################
     # when the model was fit from a Daru::DataFrame
     ################################################
+
+    data = @from_daru_args[:data]
     
-    grp = @from_daru_args[:grouping]
+    # get the random effects terms and grouping structures used in the model
+    grp = Marshal.load(Marshal.dump(@from_daru_args[:grouping]))
     re  = Marshal.load(Marshal.dump(@from_daru_args[:random_effects]))
+    num_grp_levels = Array.new
+    # take care of nested effects (see MixedModels.adjust_lmm_from_daru_inputs)
+    # and determine the number of distinct elements in eahc grouping variable
+    grp.each_index do |ind| 
+      if grp[ind].is_a? Array then
+        var1, var2 = data[grp[ind][0]].to_a, data[grp[ind][1]].to_a
+        num_grp_levels[ind] = var1.zip(var2).map { |p| p.join("_and_") }.uniq.size
+        grp[ind] = "#{grp[ind][0]}_and_#{grp[ind][1]}"
+      else
+        num_grp_levels[ind] = data[grp[ind]].uniq.size
+      end
+    end
+    # take care of :no_intercept as random effect (see MixedModels.adjust_lmm_from_daru_inputs)
     re.each do |ef|
       if ef.include? :no_intercept then
         ef.delete(:intercept)
@@ -808,8 +824,7 @@ class LMM
           varcov[name1][name2] = @sigma_mat[block_position + j, block_position + k]
         end
       end
-      num_grp_levels = @from_daru_args[:data][grp[i]].uniq.size
-      block_position += num_grp_levels * re[i].length
+      block_position += num_grp_levels[i] * re[i].length
     end
 
     return varcov
@@ -828,12 +843,12 @@ class LMM
     if @from_daru_args then
       # when the model was fit from a Daru::DataFrame
       # turn data frame of covariances into data frame of correlations
-      q = varcov.nrows
-      q.times { |i| varcov[i][i] = Math::sqrt(varcov[i][i]) }
-      q.times do |i|
-        q.times do |j|
-          # do for i != j if varcov is not nil
-          varcov[i][j] = varcov[i][j] / (varcov[i][i] * varcov[j][j]) if i != j && varcov[i][j]
+      names = varcov.vectors.relation_hash.keys
+      names.each { |x| varcov[x][x] = Math::sqrt(varcov[x][x]) }
+      names.each do |x|
+        names.each do |y|
+          # do for x != y if varcov is not nil
+          varcov[x][y] = varcov[x][y] / (varcov[x][x] * varcov[y][y]) if x != y && varcov[x][y]
         end
       end
     else
