@@ -340,8 +340,12 @@ module MixedModels
     # Deal with nestings in the random effects
     grouping.each_with_index do |grp, ind|
       if grp.is_a? Array then
-        #TODO: implement this!
-        raise(NotImplementedError, "nested effects not implemented yet")
+        raise(NotImplementedError, "nested effects can only be bi-variate") unless grp.length == 2
+        var1, var2 = data[grp[0]].to_a, data[grp[1]].to_a
+        combination_var = var1.zip(var2).map { |p| p.join("_and_") }
+        combination_var_name = "#{grp[0]}_and_#{grp[1]}"
+        data[combination_var_name] = combination_var
+        grouping[ind] = combination_var_name
       end
     end
 
