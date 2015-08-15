@@ -228,6 +228,30 @@ describe LMM do
         #  a1   0.3936905
         #  a2  -1.0059386
         #  a3   0.6122481
+        #  > mod = lmer(y~x+(1|a) + (x|a:b), data=df, REML=FALSE)
+        #  > mod1 = lmer(y~x+(1|a) + (1|a:b), data=df, REML=FALSE)
+        #  > anova(mod,mod1,test="Chisq")
+        #  Data: df
+        #  Models:
+        #  mod1: y ~ x + (1 | a) + (1 | a:b)
+        #  mod: y ~ x + (1 | a) + (x | a:b)
+        #       Df    AIC    BIC  logLik deviance  Chisq Chi Df Pr(>Chisq)    
+        #  mod1  5 407.73 420.75 -198.86   397.73                             
+        #  mod   7  94.68 112.92  -40.34    80.68 317.05      2  < 2.2e-16 ***
+        #  ---
+        #  Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+        #
+        #  > mod1 = lmer(y~1+(1|a) + (x|a:b), data=df, REML=FALSE)
+        #  > anova(mod,mod1,test="Chisq")
+        #  Data: df
+        #  Models:
+        #  mod1: y ~ 1 + (1 | a) + (x | a:b)
+        #  mod: y ~ x + (1 | a) + (x | a:b)
+        #       Df    AIC    BIC  logLik deviance  Chisq Chi Df Pr(>Chisq)    
+        #  mod1  6 105.01 120.64 -46.504   93.008                             
+        #  mod   7  94.68 112.92 -40.340   80.680 12.327      1  0.0004464 ***
+        #  ---
+        #  Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
         it "computes the REML criterion correctly" do
           expect(model_fit.deviance).to be_within(1e-1).of(78.4)
@@ -269,6 +293,35 @@ describe LMM do
                    :intercept_a2_and_b1,:x_a2_and_b1,:intercept_a2_and_b2,:x_a2_and_b2,
                    :intercept_a3_and_b1,:x_a3_and_b1,:intercept_a3_and_b2,:x_a3_and_b2]
           expect(model_fit.ran_ef_names).to eq(names)
+        end
+
+        let(:no_reml_model) do
+          case constructor_method
+          when "#from_formula"
+            LMM.from_formula(formula: "y ~ x + (1|a) + (x | a:b)", data: df, reml: false)
+          when "#from_daru"
+            LMM.from_daru(response: :y, fixed_effects: [:intercept, :x], 
+                          random_effects: [[:intercept], [:intercept, :x]], grouping: [:a, [:a, :b]], 
+                          reml: false, data: df)
+          end
+        end
+
+        describe "#fix_ef_p" do
+          context "with method: :lrt" do
+            it "returns correcp p-value" do
+              p = no_reml_model.fix_ef_p(variable: :x, method: :lrt)
+              expect(p).to be_within(1e-6).of(0.0004464)
+            end
+          end
+        end
+
+        describe "#ran_ef_p" do
+          context "with method: :lrt" do
+            it "returns correcp p-value" do
+              p = no_reml_model.ran_ef_p(variable: :x, grouping: [:a,:b], method: :lrt)
+              expect(p).to be_within(1e-15).of(0.0)
+            end
+          end
         end
       end
     end

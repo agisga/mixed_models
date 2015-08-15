@@ -751,7 +751,8 @@ class LMM
     return conf_int
   end
 
-  # Estimates of the variances and covariances of the random effects.
+  # A convenience method, which summarizes the estimates of the variances and covariances of 
+  # the random effects.
   # If the model was fit via #from_formula or #from_daru, then a Daru::DatFrame with rows 
   # and columns named according to the random effects, containing all random effects variances
   # and covariances is returned.
@@ -759,7 +760,10 @@ class LMM
   # of the random effects vector is returned as a NMatrix object.
   # This is mainly an auxilliary function for #ran_ef_summary.
   #
+  # See also LMM#sigma_mat.
+  #
   def ran_ef_cov
+
     ########################################################################
     # when the model was fit from raw matrices with a custom argument thfun
     ########################################################################
@@ -777,7 +781,7 @@ class LMM
     re  = Marshal.load(Marshal.dump(@from_daru_args[:random_effects]))
     num_grp_levels = Array.new
     # take care of nested effects (see MixedModels.adjust_lmm_from_daru_inputs)
-    # and determine the number of distinct elements in eahc grouping variable
+    # and determine the number of distinct elements in each grouping variable
     grp.each_index do |ind| 
       if grp[ind].is_a? Array then
         var1, var2 = data[grp[ind][0]].to_a, data[grp[ind][1]].to_a
@@ -792,6 +796,21 @@ class LMM
       if ef.include? :no_intercept then
         ef.delete(:intercept)
         ef.delete(:no_intercept)
+      end
+    end
+
+    #FIXME: this:
+    re.each do |ef_array|
+      if ef_array.any? { |ef| ef.is_a? Array }  then
+        raise(NotImplementedError, "LMM#ran_ef_cov does not work correctly in the presence of random interaction effects. Please use LMM#sigma_mat in those cases.")
+      else
+        ef_array.each do |ef|
+          unless ef == :intercept then
+            unless data[ef].type == :numeric then
+              raise(NotImplementedError, "LMM#ran_ef_cov does not work correctly in the presence of categorical variables as random effects. Please use LMM#sigma_mat in those cases.")
+            end
+          end
+        end
       end
     end
 
@@ -830,14 +849,18 @@ class LMM
     return varcov
   end
 
-  # Estimates of the standard deviations and correlations of the random effects.
+  # A convenience method, which summarizes the estimates of the standard deviations and 
+  # correlations of the random effects.
   # If the model was fit via #from_formula or #from_daru, then a Daru::DatFrame with rows 
   # and columns named according to the random effects, containing all random effects variances
   # and covariances is returned.
   # If the model was fit from raw model matrices via #initialize, then the correlation matrix
   # of the random effects vector is returned as a NMatrix object.
   #
+  # See also LMM#sigma_mat.
+  #
   def ran_ef_summary
+
     varcov = self.ran_ef_cov
 
     if @from_daru_args then

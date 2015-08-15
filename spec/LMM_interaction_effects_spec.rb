@@ -49,7 +49,20 @@ describe LMM do
           #  a    0.043              
           #  b    0.030 -0.050       
           #  a:b -0.013 -0.022 -0.027
-          
+          #            
+          #  > mod = lmer(y~a+b+a:b+(0+a:b|gr), data=df, REML=FALSE)
+          #  > mod1 = lmer(y~a+b+(0+a:b|gr), data=df, REML=FALSE)
+          #  > anova(mod, mod1, test="Chisq")
+          #  Data: df
+          #  Models:
+          #  mod1: y ~ a + b + (0 + a:b | gr)
+          #  mod: y ~ a + b + a:b + (0 + a:b | gr)
+          #       Df    AIC    BIC  logLik deviance  Chisq Chi Df Pr(>Chisq)   
+          #  mod1  5 321.14 334.16 -155.57   311.14                            
+          #  mod   6 315.84 331.47 -151.92   303.84 7.2984      1   0.006902 **
+          #  ---
+          #  Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
           it "finds the minimal REML deviance correctly" do
             expect(model_fit.deviance).to be_within(1e-1).of(312.3)
           end
@@ -108,6 +121,33 @@ describe LMM do
             expect(Array.new(df_unaltered.nrows) { 1.0 }).to eq(weights)
             expect(offset).to eq(0.0)
           end
+
+          let(:no_reml_model) do
+            case constructor_method
+            when "#from_formula"
+              LMM.from_formula(formula: "y ~ a + b + a:b + (0 + a:b | gr)", data: df, reml: false)
+            when "#from_daru"
+              LMM.from_daru(response: :y, fixed_effects: [:intercept, :a, :b, [:a, :b]], 
+                            random_effects: [[:no_intercept, [:a, :b]]], grouping: [:gr], reml: false, data: df)
+            end
+          end
+
+          describe "#fix_ef_p" do
+            context "with method: :lrt" do
+              it "returns correcp p-value" do
+                p = no_reml_model.fix_ef_p(variable: [:a,:b], method: :lrt)
+                expect(p).to be_within(1e-4).of(0.006902)
+              end
+            end
+          end
+
+          describe "#ran_ef_p" do
+            context "with method: :lrt" do
+              it "returns correcp p-value" do
+                expect{no_reml_model.ran_ef_p(variable: [:a,:b], grouping: :gr, method: :lrt)}.to raise_error(NoMethodError)
+              end
+            end
+          end
         end
 
         context "between a numeric and a categorical variable" do
@@ -139,7 +179,17 @@ describe LMM do
           #  [1] 286.3773
           #  > sigma(mod)
           #  [1] 0.9814441
-          
+          #            
+          #  > mod = lmer(y~num+cat+num:cat+(0+num:cat|gr), data=df, REML=FALSE)> mod1 = lmer(y~num+cat+(0+num:cat|gr), data=df, REML=FALSE)
+          #  > anova(mod, mod1, test="Chisq")
+          #  Data: df
+          #  Models:
+          #  mod1: y ~ num + cat + (0 + num:cat | gr)
+          #  mod: y ~ num + cat + num:cat + (0 + num:cat | gr)
+          #       Df    AIC    BIC  logLik deviance  Chisq Chi Df Pr(>Chisq)
+          #  mod1 11 303.01 331.67 -140.50   281.01                         
+          #  mod  13 304.35 338.21 -139.17   278.35 2.6608      2     0.2644
+
           it "finds the minimal REML deviance correctly" do
             expect(model_fit.deviance).to be_within(1e-2).of(286.3773)
           end
@@ -175,6 +225,33 @@ describe LMM do
                             :num_interaction_with_cat_lvl_B_control, :num_interaction_with_cat_lvl_C_control]
             expect(model_fit.ran_ef.keys).to eq(ran_ef_names)
             expect(model_fit.ran_ef_names).to eq(ran_ef_names)
+          end
+
+          let(:no_reml_model) do
+            case constructor_method
+            when "#from_formula"
+              LMM.from_formula(formula: "y ~ num + cat + num:cat + (0 + num:cat | gr)", reml: false, data: df)
+            when "#from_daru"
+              LMM.from_daru(response: :y, fixed_effects: [:intercept, :num, :cat, [:num, :cat]],
+                            random_effects: [[:no_intercept, [:num, :cat]]], grouping: [:gr], reml: false, data: df)
+            end
+          end
+
+          describe "#fix_ef_p" do
+            context "with method: :lrt" do
+              it "returns correcp p-value" do
+                p = no_reml_model.fix_ef_p(variable: [:num,:cat], method: :lrt)
+                expect(p).to be_within(1e-4).of(0.2644)
+              end
+            end
+          end
+
+          describe "#ran_ef_p" do
+            context "with method: :lrt" do
+              it "returns correcp p-value" do
+                expect{no_reml_model.ran_ef_p(variable: [:num,:cat], grouping: :gr, method: :lrt)}.to raise_error(NoMethodError)
+              end
+            end
           end
         end
 
@@ -290,7 +367,22 @@ describe LMM do
             #  f2w     -0.864 -0.075 -0.430               
             #  f1b:f2v -0.525 -0.724 -0.950  0.593        
             #  f1b:f2w  0.552 -0.426  0.016 -0.664 -0.093 
-            
+            #  > mod= lmer(y~f1+f2+f1:f2+(0+f1:f2|gr), data=df, REML=FALSE)
+            #  > mod1= lmer(y~f1+f2+(0+f1:f2|gr), data=df, REML=FALSE)
+            #  Warning messages:
+            #  1: In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+            #    Model failed to converge with max|grad| = 30.1587 (tol = 0.002, component 8)
+            #  2: In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+            #    Model failed to converge: degenerate  Hessian with 1 negative eigenvalues
+            #  > anova(mod,mod1,test="Chisq")
+            #  Data: df
+            #  Models:
+            #  mod1: y ~ f1 + f2 + (0 + f1:f2 | gr)
+            #  mod: y ~ f1 + f2 + f1:f2 + (0 + f1:f2 | gr)
+            #       Df    AIC    BIC  logLik deviance  Chisq Chi Df Pr(>Chisq)
+            #  mod1 26 325.54 393.28 -136.77   273.54                         
+            #  mod  28 325.82 398.76 -134.91   269.82 3.7241      2     0.1554
+
             it "finds the minimal REML deviance correctly" do
               expect(model_fit.deviance).to be_within(1e-1).of(273.3)
             end
@@ -328,6 +420,33 @@ describe LMM do
                               :f1_lvl_b_interaction_with_f2_lvl_w_g2]
               expect(model_fit.ran_ef.keys).to eq(ran_ef_names)
               expect(model_fit.ran_ef_names).to eq(ran_ef_names)
+            end
+
+            let(:no_reml_model) do
+              case constructor_method
+              when "#from_formula"
+                LMM.from_formula(formula: "y ~ f1 + f2 + f1:f2 + (0 + f1:f2 | gr)", reml: false, data: df)
+              when "#from_daru"
+                LMM.from_daru(response: :y, fixed_effects: [:intercept, :f1, :f2, [:f1, :f2]],
+                              random_effects: [[:no_intercept, [:f1, :f2]]], grouping: [:gr], reml: false, data: df)
+              end
+            end
+
+            describe "#fix_ef_p" do
+              context "with method: :lrt" do
+                it "returns correcp p-value" do
+                  p = no_reml_model.fix_ef_p(variable: [:f1,:f2], method: :lrt)
+                  expect(p).to be_within(1e-2).of(0.1554)
+                end
+              end
+            end
+
+            describe "#ran_ef_p" do
+              context "with method: :lrt" do
+                it "returns correcp p-value" do
+                  expect{no_reml_model.ran_ef_p(variable: [:f1,:f2], grouping: :gr, method: :lrt)}.to raise_error(NoMethodError)
+                end
+              end
             end
           end
 
@@ -388,6 +507,34 @@ describe LMM do
             #
             #    > REMLcrit(mod)
             #    [1] 273.3275
+            #    > mod = lmer(y~f1:f2+(0+f1+f1:f2|gr), data=df, REML=FALSE)
+            #    fixed-effect model matrix is rank deficient so dropping 1 column / coefficient
+            #    Warning messages:
+            #    1: In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+            #      Model failed to converge with max|grad| = 76.4263 (tol = 0.002, component 9)
+            #    2: In checkConv(attr(opt, "derivs"), opt$par, ctrl = control$checkConv,  :
+            #      Model failed to converge: degenerate  Hessian with 1 negative eigenvalues
+            #    > mod1 = lmer(y~1+(0+f1+f1:f2|gr), data=df, REML=FALSE)
+            #    > anova(mod, mod1, test="Chisq")
+            #    Data: df
+            #    Models:
+            #    mod1: y ~ 1 + (0 + f1 + f1:f2 | gr)
+            #    mod: y ~ f1:f2 + (0 + f1 + f1:f2 | gr)
+            #         Df    AIC    BIC  logLik deviance Chisq Chi Df Pr(>Chisq)  
+            #    mod1 23 326.80 386.72 -140.40   280.80                          
+            #    mod  28 326.48 399.43 -135.24   270.48 10.32      5    0.06665 .
+            #    ---
+            #    Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+            #    > mod1 = lmer(y~f1:f2+(0+f1|gr), data=df, REML=FALSE)
+            #    fixed-effect model matrix is rank deficient so dropping 1 column / coefficient
+            #    > anova(mod, mod1, test="Chisq")
+            #    Data: df
+            #    Models:
+            #    mod1: y ~ f1:f2 + (0 + f1 | gr)
+            #    mod: y ~ f1:f2 + (0 + f1 + f1:f2 | gr)
+            #         Df    AIC    BIC  logLik deviance  Chisq Chi Df Pr(>Chisq)
+            #    mod1 10 314.97 341.02 -147.49   294.97                         
+            #    mod  28 326.48 399.43 -135.24   270.48 24.489     18     0.1397
 
             it "finds the minimal REML deviance correctly" do
               expect(model_fit.deviance).to be_within(1e-1).of(273.3275)
@@ -425,6 +572,34 @@ describe LMM do
                               :f1_lvl_b_interaction_with_f2_lvl_w_g2]
               expect(model_fit.ran_ef.keys).to eq(ran_ef_names)
               expect(model_fit.ran_ef_names).to eq(ran_ef_names)
+            end
+
+            let(:no_reml_model) do
+              case constructor_method
+              when "#from_formula"
+                LMM.from_formula(formula: "y ~ f1:f2 + (0 + f1 + f1:f2 | gr)", reml: false, data: df)
+              when "#from_daru"
+                LMM.from_daru(response: :y, fixed_effects: [:intercept, [:f1, :f2]],
+                              random_effects: [[:no_intercept, :f1, [:f1, :f2]]], grouping: [:gr], reml: false, data: df)
+              end
+            end
+
+            describe "#fix_ef_p" do
+              context "with method: :lrt" do
+                it "returns correcp p-value" do
+                  p = no_reml_model.fix_ef_p(variable: [:f1,:f2], method: :lrt)
+                  expect(p).to be_within(1e-1).of(0.06665)
+                end
+              end
+            end
+
+            describe "#ran_ef_p" do
+              context "with method: :lrt" do
+                it "returns correcp p-value" do
+                  p = no_reml_model.ran_ef_p(variable: [:f1,:f2], grouping: :gr, method: :lrt)
+                  expect(p).to be_within(1e-4).of(0.1397)
+                end
+              end
             end
           end
 
