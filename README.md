@@ -8,9 +8,11 @@ Fit statistical (linear) models with fixed and mixed (random) effects in Ruby.
 
 #### Linear mixed models
 
-* Support for formula language of the `R` package `lme4` makes model specification convenient and user friendly. An expanation of the `lme4` formula interface can be found in the [`lme4` vignette](https://cran.r-project.org/web/packages/lme4/vignettes/lmer.pdf), or on stackexchange ([example](http://stats.stackexchange.com/questions/13166/rs-lmer-cheat-sheet)). 
+* Support for the formula language of the `R` package `lme4` makes model specification convenient and user friendly. An expanation of the `lme4` formula interface can be found in the `lme4` [vignette](https://cran.r-project.org/web/packages/lme4/vignettes/lmer.pdf), or on stackexchange ([example](http://stats.stackexchange.com/questions/13166/rs-lmer-cheat-sheet)). 
 
 * Flexible model specification capabilities with the possibility to pass the random effects covariance structure as a `Proc`.
+
+* Possibility of singular fits (i.e models with random effects variance equal to zero).
 
 * Likelihood ratio test for nested models (Chi squared or bootstrap based).
 
