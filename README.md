@@ -4,6 +4,24 @@
 
 Fit statistical (linear) models with fixed and mixed (random) effects in Ruby.
 
+## Features
+
+#### Linear mixed models
+
+* Support for formula language of the `R` package `lme4` makes model specification convenient and user friendly. An expanation of the `lme4` formula interface can be found in the [`lme4` vignette](https://cran.r-project.org/web/packages/lme4/vignettes/lmer.pdf), or on stackexchange ([example](http://stats.stackexchange.com/questions/13166/rs-lmer-cheat-sheet)). 
+
+* Flexible model specification capabilities with the possibility to pass the random effects covariance structure as a `Proc`.
+
+* Likelihood ratio test for nested models (Chi squared or bootstrap based).
+
+* Many types of hypotheses tests for the fixed and random effects (based on LRT, bootstrap or the Wald Z statistic).
+
+* Four types of bootstrap confidence intervals for the fixed effects coefficient estimates, as well as Wald Z confidence intervals.
+
+* All bootstrap based methods are performed in parallel.
+
+* Prediction on new data and prediction intervals.
+
 ## Installation
 
 <!-- Add this line to your application's Gemfile:
@@ -34,7 +52,7 @@ Feel free to contact me at alexej [dot] go [at] googlemail [dot] com, in case of
 
 ## Usage
 
-### Linear Mixed Models (LMM)
+#### Linear Mixed Models (LMM)
 
 * [Fitting a linear mixed model](http://nbviewer.ipython.org/github/agisga/mixed_models/blob/master/notebooks/LMM_model_fitting.ipynb), accessing the estimated parameters, and assessing the quality of the model fit (to some extent)
 
