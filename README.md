@@ -14,6 +14,8 @@ Fit statistical (linear) models with fixed and mixed (random) effects in Ruby.
 
 * Possibility of singular fits (i.e models with random effects variance equal to zero).
 
+* Support for multiple crossed or nested random effects.
+
 * Likelihood ratio test for nested models (Chi squared or bootstrap based).
 
 * Many types of hypotheses tests for the fixed and random effects (based on LRT, bootstrap or the Wald Z statistic).
