@@ -2,9 +2,7 @@
 
 [![Build Status](https://travis-ci.org/agisga/mixed_models.svg?branch=master)](https://travis-ci.org/agisga/mixed_models)
 
-Fit statistical linear models with fixed and mixed (random) effects in Ruby.
-
-**Early stage work in progress.**
+Fit statistical (linear) models with fixed and mixed (random) effects in Ruby.
 
 ## Installation
 
@@ -34,9 +32,15 @@ Ruby is required in version >=2.0 because keyword arguments are excessively used
 
 Feel free to contact me at alexej [dot] go [at] googlemail [dot] com, in case of difficulties with the installation.
 
-## Usage Examples
+## Usage
 
-* [This IRuby notebook](http://nbviewer.ipython.org/github/agisga/mixed_models/blob/master/notebooks/LMM.ipynb) shows an example linear mixed model fit and most of the methods available for objects of class `LMM`.
+### Linear Mixed Models (LMM)
+
+* [Fitting a linear mixed model](http://nbviewer.ipython.org/github/agisga/mixed_models/blob/master/notebooks/LMM_model_fitting.ipynb), accessing the estimated parameters, and assessing the quality of the model fit (to some extent)
+
+* [Hypothesis tests and confidence intervals](http://nbviewer.ipython.org/github/agisga/mixed_models/blob/master/notebooks/LMM_tests_and_intervals.ipynb)
+
+* [Predictions and prediction intervals](http://nbviewer.ipython.org/github/agisga/mixed_models/blob/master/notebooks/LMM_predictions.ipynb)
 
 * [This IRuby notebook](http://nbviewer.ipython.org/github/agisga/mixed_models/blob/master/notebooks/blog_data.ipynb) shows an application of `mixed_models` to real data, which originate from blog posts from various sources in 2010-2012. The analyzed data set is of nontrivial size (~50000x300) and nontrivial structure (redundant variables, missing values, data transformations, etc.).
 
