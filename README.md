@@ -8,21 +8,20 @@ Fit statistical (linear) models with fixed and mixed (random) effects in Ruby.
 
 #### Linear mixed models
 
-* Support for the formula language of the `R` package `lme4` makes model specification convenient and user friendly. An expanation of the `lme4` formula interface can be found in the `lme4` [vignette](https://cran.r-project.org/web/packages/lme4/vignettes/lmer.pdf), or on stackexchange ([example](http://stats.stackexchange.com/questions/13166/rs-lmer-cheat-sheet)). 
+* Support for the formula language of the `R` package `lme4` makes model specification convenient and user friendly. An expanation of the `lme4` formula interface can be found in the `lme4` [vignette](https://cran.r-project.org/web/packages/lme4/vignettes/lmer.pdf), or on stackexchange ([example](http://stats.stackexchange.com/questions/13166/rs-lmer-cheat-sheet)). Types of linear mixed models that can be fit by `mixed_models` with the formula interface include:
+  - Models with interaction fixed or random effects (e.g. `y ~ x + z + x:z + (x + z + x:z | g)`),
+  - Models with multiple crossed random effects (e.g. `y ~ x + (x|g) + (x|h)`),
+  - Models with nested random effects (e.g. `y ~ x + (x|g) + (x|g:h)`). 
 
-* Flexible model specification capabilities with the possibility to pass the random effects covariance structure as a `Proc`.
+* Flexible model specification capabilities with the possibility to pass the random effects covariance structure as a `Proc`, when fitting a model from raw madel matrices.
 
 * Possibility of singular fits (i.e models with random effects variance equal to zero).
-
-* Support for multiple crossed or nested random effects.
 
 * Likelihood ratio test for nested models (Chi squared or bootstrap based).
 
 * Many types of hypotheses tests for the fixed and random effects (based on LRT, bootstrap or the Wald Z statistic).
 
-* Four types of bootstrap confidence intervals for the fixed effects coefficient estimates, as well as Wald Z confidence intervals.
-
-* All bootstrap based methods are performed in parallel.
+* Four types of bootstrap confidence intervals for the fixed effects coefficient estimates, as well as Wald Z confidence intervals. All bootstrap based methods are performed in parallel by default.
 
 * Prediction on new data and prediction intervals.
 
