@@ -25,6 +25,18 @@ Fit statistical (linear) models with fixed and mixed (random) effects in Ruby.
 
 * Prediction on new data and prediction intervals.
 
+## Installation
+
+To install the latest stable version:
+
+    $ gem install mixed_models
+
+Alternatively, you can add the line `gem 'mixed_models'` to your application's Gemfile, and then execute:
+
+    $ bundle
+
+Ruby is required in version >=2.0 because keyword arguments are excessively used in `mixed_models`.
+
 ## Usage
 
 #### Linear mixed models (LMM) tutorials
@@ -46,23 +58,6 @@ Fit statistical (linear) models with fixed and mixed (random) effects in Ruby.
 Some other examples in form of Ruby code can be found in [the examples folder](https://github.com/agisga/mixed_models/tree/master/examples).
 
 Further examples can be found in several BLOG posts (see below).
-
-<!-- ## Installation
-
-Ruby is required in version >=2.0 because keyword arguments are excessively used in `mixed_models`.
-
-Add this line to your application's Gemfile:
-
-```ruby
-gem 'mixed_models'
-```
-And then execute:
-
-    $ bundle
-
-Or install it yourself as:
-
-    $ gem install mixed_models -->
 
 ## Some relevant BLOG posts
 
@@ -89,9 +84,6 @@ bundle exec rake install
 ```
 
 The automatic tests can be run with `bundle exec rspec spec`.
-
-<!-- To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release` to create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
--->
 
 ## Contributing
 
