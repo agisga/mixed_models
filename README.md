@@ -28,7 +28,7 @@ Fit statistical (linear) models with fixed and mixed (random) effects in Ruby.
 
 ## Usage
 
-#### Linear Mixed Models (LMM) Tutorials
+#### Linear mixed models (LMM) tutorials
 
 * [Fitting a linear mixed model](http://nbviewer.ipython.org/github/agisga/mixed_models/blob/master/notebooks/LMM_model_fitting.ipynb), accessing the estimated parameters, and assessing the quality of the model fit (to some extent)
 
@@ -36,9 +36,9 @@ Fit statistical (linear) models with fixed and mixed (random) effects in Ruby.
 
 * [Predictions and prediction intervals](http://nbviewer.ipython.org/github/agisga/mixed_models/blob/master/notebooks/LMM_predictions.ipynb)
 
-* [Models with multiple crossed or nested random effects]()
+* [Models with multiple crossed or nested random effects](http://nbviewer.ipython.org/github/agisga/mixed_models/blob/master/notebooks/LMM_multiple_random_effects.ipynb)
 
-#### Analysis of Real Data
+#### Analysis of real data
 
 * [This IRuby notebook](http://nbviewer.ipython.org/github/agisga/mixed_models/blob/master/notebooks/blog_data.ipynb) shows an application of `mixed_models` to real data, which originate from blog posts from various sources in 2010-2012. The analyzed data set is of nontrivial size (~50000x300) and nontrivial structure (redundant variables, missing values, data transformations, etc.).
 
