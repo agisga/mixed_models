@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.authors       = ["Alexej Gossmann"]
   spec.email         = ["alexej.go@googlemail.com"]
 
-  spec.summary       = %q{Mixed effects models in Ruby}
+  spec.summary       = %q{Statistical mixed effects models}
   spec.description   = %q{Fit statistical (linear) models with fixed and mixed (random) effects in Ruby}
   spec.homepage      = "https://github.com/agisga/mixed_models.git"
   spec.license       = "BSD-3-Clause"
