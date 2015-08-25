@@ -23,7 +23,8 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake", "~> 10.0"
   spec.add_development_dependency "rspec", "~> 3.2"
 
-  spec.add_dependency "nmatrix", "= 0.1.0"
+  spec.add_dependency "nmatrix", "~> 0.2.0"
+  spec.add_dependency "nmatrix-lapacke", "~> 0.2.0"
   spec.add_dependency "daru", "= 0.1.0"
   spec.add_dependency "distribution", "~> 0.7.3"
   spec.add_dependency "parallel", "~> 1.6.1"

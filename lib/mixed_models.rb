@@ -1,6 +1,7 @@
 # Copyright (c) 2015 Alexej Gossmann 
 
 require 'nmatrix'
+require 'nmatrix/lapack_plugin'
 require 'daru'
 require 'distribution'
 

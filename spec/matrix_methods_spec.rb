@@ -33,39 +33,6 @@ describe NMatrix do
   end
 
   [:float32, :float64].each do |dtype|
-    context "#matrix_valued_solve #{dtype} dense" do
-      let(:a) { NMatrix.new([3,3], [1, 2, 3, 0, 0.5, 4, 3, 3, 9], dtype: dtype) }
-
-      context "with a vector-valued right hand side" do
-        it "solves a matrix-valued linear system A * X = B" do
-          b = NMatrix.new([3,1], [1, 2, 3], dtype: dtype)
-          x = a.matrix_valued_solve(b)
-          r = (a.dot(x) - b).to_flat_a
-          expect(r.max).to be_within(1e-6).of(0.0)
-        end
-      end
-
-      context "with a narrow-matrix-valued right hand side" do
-        it "solves a matrix-valued linear system A * X = B" do
-          b = NMatrix.new([3,2], [1, 4, 2, 5, 3, 6], dtype: dtype)
-          x = a.matrix_valued_solve(b)
-          r = (a.dot(x) - b).to_flat_a
-          expect(r.max).to be_within(1e-6).of(0.0)
-        end
-      end
-
-      context "with a wide-matrix-valued right hand side" do
-        it "solves a matrix-valued linear system A * X = B" do
-          b = NMatrix.new([3,6], (1..18).to_a, dtype: dtype)
-          x = a.matrix_valued_solve(b)
-          r = (a.dot(x) - b).to_flat_a
-          expect(r.max).to be_within(1e-5).of(0.0)
-        end
-      end
-    end
-  end
-
-  [:float32, :float64].each do |dtype|
     context "#triangular_solve #{dtype} dense" do
       context "when lower triangular" do
         let(:a) { NMatrix.new([3,3], [1, 0, 0, 2, 0.5, 0, 3, 3, 9], dtype: dtype) }
@@ -118,27 +85,4 @@ describe NMatrix do
       end
     end
   end
-
-  ALL_DTYPES.each do |dtype|
-    [:dense, :yale, :list].each do |stype|
-      context "#block_diagonal #{dtype} #{stype}" do
-        it "creates a block-diagonal NMatrix" do
-          a = NMatrix.new([2,2],[1,2,
-                                 3,4])
-          b = NMatrix.new([1,1],[123.0])
-          c = NMatrix.new([3,3],[1,2,3,
-                                 1,2,3,
-                                 1,2,3])
-          m = NMatrix.block_diagonal(a,b,c, dtype: dtype, stype: stype)
-          expect(m).to eq(NMatrix.new([6,6], [1, 2,   0, 0, 0, 0,
-                                              3, 4,   0, 0, 0, 0,
-                                              0, 0, 123, 0, 0, 0,
-                                              0, 0,   0, 1, 2, 3,
-                                              0, 0,   0, 1, 2, 3,
-                                              0, 0,   0, 1, 2, 3], dtype: dtype, stype: stype))
-        end
-      end
-    end
-  end
-
 end
