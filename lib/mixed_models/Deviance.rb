@@ -40,8 +40,7 @@ module MixedModels
       cu = d.l.triangular_solve(:lower, d.lambdat.dot(d.ztwy))
       rzx = d.l.triangular_solve(:lower, d.lambdat.dot(d.ztwx))
       d.rxtrx = d.xtwx - (rzx.transpose.dot(rzx))
-      # TODO: the following can be replaced by #solve when version 0.2.0 of the nmatrix gem is released
-      d.beta = d.rxtrx.matrix_valued_solve(d.xtwy - rzx.transpose.dot(cu))
+      d.beta = d.rxtrx.solve(d.xtwy - rzx.transpose.dot(cu))
       d.u = d.l.transpose.triangular_solve(:upper, (cu - rzx.dot(d.beta)))
       d.b = d.lambdat.transpose.dot(d.u)
       
