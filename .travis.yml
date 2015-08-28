@@ -5,6 +5,9 @@ rvm:
 before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -y liblapack-dev
+# for some reason ATLAS implementation of LAPACK leads to errors on travis;
+# use the reference LAPACK implementation for now.
+#  - sudo apt-get install -y libatlas-base-dev 
 install:
   - gem install bundler
   - bundle install

@@ -29,6 +29,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "distribution", "~> 0.7.3"
   spec.add_dependency "parallel", "~> 1.6.1"
 
-  # This gem will work with Ruby 2.0 or newer 
-  spec.required_ruby_version = '>= 2.0'
+  # This gem will work with Ruby 2.1 or newer, because it uses required 
+  # keyword arguments (i.e. keyword arguments without default values)
+  spec.required_ruby_version = '>= 2.1'
 end
