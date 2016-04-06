@@ -12,8 +12,8 @@ module Daru
     def to_nm(dtype: :float64, stype: :dense)
       n, m = self.nrows, self.ncols
       data_array = Array.new 
-      0.upto(n-1) { |i| data_array.concat(self.row[i].to_a) }
-      return NMatrix.new([n,m], data_array, dtype: dtype, stype: stype)
+      self.each { |i| data_array.concat(i.to_a) }
+      return NMatrix.new([m,n], data_array, dtype: dtype, stype: stype).transpose
     end
 
     # Create for all non-numeric vectors 0-1-indicator columns.
