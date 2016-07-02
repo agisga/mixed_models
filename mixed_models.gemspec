@@ -25,7 +25,7 @@ Gem::Specification.new do |spec|
 
   spec.add_runtime_dependency "nmatrix", "~> 0.2.0"
   spec.add_runtime_dependency "nmatrix-lapacke", "~> 0.2.0"
-  spec.add_runtime_dependency "daru", "= 0.1.0"
+  spec.add_runtime_dependency "daru", "~> 0.1.0"
   spec.add_runtime_dependency "distribution", "~> 0.7.3"
   spec.add_runtime_dependency "parallel", "~> 1.6.1"
 

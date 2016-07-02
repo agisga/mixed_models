@@ -19,7 +19,11 @@ describe LMM do
     describe constructor_method do
       context "with numeric and categorical fixed effects and numeric random effects" do
 
-        let(:df) { Daru::DataFrame.from_csv("spec/data/alien_species.csv") }
+        let(:df) do
+          df = Daru::DataFrame.from_csv("spec/data/alien_species.csv")
+          df.vectors = Daru::Index.new(df.vectors.map { |v| v.to_sym } )
+          df
+        end
 
         context "using REML deviance" do
 
@@ -88,6 +92,7 @@ describe LMM do
           it "has no side effects on the input parameters" do
             reml = true
             df_unaltered = Daru::DataFrame.from_csv("spec/data/alien_species.csv")
+            df_unaltered.vectors = Daru::Index.new(df_unaltered.vectors.map { |v| v.to_sym } )
             weights = Array.new(df_unaltered.nrows) { 1.0 }
             offset = 0.0
             start_point = [1.0, 0.5, 1.0]
@@ -117,7 +122,11 @@ describe LMM do
             end
 
             expect(reml).to eq(true)
-            expect(Daru::DataFrame.from_csv("spec/data/alien_species.csv")).to eq(df_unaltered)
+
+            df_check = Daru::DataFrame.from_csv("spec/data/alien_species.csv")
+            df_check.vectors = Daru::Index.new(df_check.vectors.map { |v| v.to_sym } )
+            expect(df_check).to eq(df_unaltered)
+
             expect(Array.new(df_unaltered.nrows) { 1.0 }).to eq(weights)
             expect(offset).to eq(0.0)
             expect(start_point).to eq([1.0, 0.5, 1.0])
@@ -190,7 +199,11 @@ describe LMM do
   ["#from_formula", "#from_daru"].each do |constructor_method|
     context "when model obtained via #{constructor_method}" do
       context "with numeric and categorical fixed effects and numeric random effects" do
-        let(:df) { Daru::DataFrame.from_csv("spec/data/alien_species.csv") }
+        let(:df) do
+          df = Daru::DataFrame.from_csv("spec/data/alien_species.csv")
+          df.vectors = Daru::Index.new(df.vectors.map { |v| v.to_sym } )
+          df
+        end
 
         subject(:model_fit) do
           case constructor_method
@@ -379,7 +392,11 @@ describe LMM do
 
         describe "#predict" do
           context "with Daru::DataFrame new data input" do
-            let(:newdata) { Daru::DataFrame.from_csv("spec/data/alien_species_newdata.csv") }
+            let(:newdata) do
+              df = Daru::DataFrame.from_csv("spec/data/alien_species_newdata.csv")
+              df.vectors = Daru::Index.new(df.vectors.map { |v| v.to_sym } )
+              df
+            end
 
             it "computes correct predictions when with_ran_ef is true"do
               result_from_R = [1070.912575, 182.452063, -17.064468, 384.788159, 876.124072, 
@@ -400,7 +417,11 @@ describe LMM do
         describe "#predict_with_intervals" do
           context "with DaruDataFrame newdata" do
             context "using type: :confidence" do
-              let(:newdata) { Daru::DataFrame.from_csv("spec/data/alien_species_newdata.csv") }
+              let(:newdata) do
+                df = Daru::DataFrame.from_csv("spec/data/alien_species_newdata.csv")
+                df.vectors = Daru::Index.new(df.vectors.map { |v| v.to_sym } )
+                df
+              end
 
               it "computes confidence intervals for predictions correctly" do
                 lower88_from_R = [906.32839, 17.21062, 10.21883,411.90672,701.96039,701.85218,920.50198,712.62678,714.24725, 20.67199] 
@@ -636,7 +657,9 @@ describe LMM do
 
         describe "#refit" do
           let(:new_model) do
-            model_fit.refit(newdata: Daru::DataFrame.from_csv("spec/data/alien_species_refit.csv"))
+            df_for_refit = Daru::DataFrame.from_csv("spec/data/alien_species_refit.csv")
+            df_for_refit.vectors = Daru::Index.new(df_for_refit.vectors.map { |v| v.to_sym } )
+            model_fit.refit(newdata: df_for_refit)
           end
 
           # compare the obtained estimates to the ones obtained for the same data 
@@ -1166,6 +1189,7 @@ describe LMM do
             context "when models were not fit to the same data" do
               let(:full_model) do 
                 data =  Daru::DataFrame.from_csv("spec/data/alien_species.csv") 
+                data.vectors = Daru::Index.new(data.vectors.map { |v| v.to_sym } )
                 case constructor_method
                 when "#from_formula"
                   LMM.from_formula(formula: "Aggression ~ Species + (1 | Location)", 
@@ -1179,6 +1203,7 @@ describe LMM do
 
               let(:reduced_model) do 
                 data =  Daru::DataFrame.from_csv("spec/data/alien_species_refit.csv") 
+                data.vectors = Daru::Index.new(data.vectors.map { |v| v.to_sym } )
                 case constructor_method
                 when "#from_formula"
                   LMM.from_formula(formula: "Aggression ~ Species + (1 | Location)", 

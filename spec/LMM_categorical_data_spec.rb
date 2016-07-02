@@ -6,7 +6,7 @@ describe LMM do
       describe "on categorical data" do
         context "with categorical fixed and random effects" do
 
-          let(:df) { Daru::DataFrame.from_csv("spec/data/categorical_data.csv") }
+          let(:df) { Daru::DataFrame.from_csv("spec/data/categorical_data.csv", headers: true) }
 
           subject(:model_fit) do
             case constructor_method
@@ -104,7 +104,7 @@ describe LMM do
 
         context "with categorical fixed and random effects and exclusion of random intercept" do
 
-          let(:df) { Daru::DataFrame.from_csv("spec/data/categorical_data.csv") }
+          let(:df) { Daru::DataFrame.from_csv("spec/data/categorical_data.csv", headers: true) }
 
           subject(:model_fit) do
             case constructor_method
@@ -215,7 +215,7 @@ describe LMM do
 
         context "with categorical fixed and random effects and exclusion of fixed intercept" do
 
-          let(:df) { Daru::DataFrame.from_csv("spec/data/categorical_data.csv") }
+          let(:df) { Daru::DataFrame.from_csv("spec/data/categorical_data.csv", headers: true) }
 
           subject(:model_fit) do
             case constructor_method
@@ -317,7 +317,7 @@ describe LMM do
           describe "#fix_ef_p" do
             context "with method: :lrt" do
               it "raises" do
-                expect{no_reml_model.fix_ef_p(variable: :x, method: :lrt)}.to raise_error(NoMethodError)
+                expect{no_reml_model.fix_ef_p(variable: :x, method: :lrt)}.to raise_error(IndexError)
               end
             end
           end

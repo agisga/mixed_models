@@ -5,7 +5,7 @@ describe LMM do
     describe constructor_method do
       context "with nested random effects" do
         
-        let(:df) { Daru::DataFrame.from_csv("spec/data/nested_effects_data.csv") }
+        let(:df) { Daru::DataFrame.from_csv("spec/data/nested_effects_data.csv", headers: true) }
 
         subject(:model_fit) do
           case constructor_method
@@ -83,7 +83,7 @@ describe LMM do
 
       context "with crossed and nested random effects" do
         
-        let(:df) { Daru::DataFrame.from_csv("spec/data/crossed_and_nested_effects_data.csv") }
+        let(:df) { Daru::DataFrame.from_csv("spec/data/crossed_and_nested_effects_data.csv", headers: true) }
 
         subject(:model_fit) do
           case constructor_method
@@ -173,7 +173,7 @@ describe LMM do
 
       context "with nested random slope" do
         
-        let(:df) { Daru::DataFrame.from_csv("spec/data/nested_effects_with_slope_data.csv") }
+        let(:df) { Daru::DataFrame.from_csv("spec/data/nested_effects_with_slope_data.csv", headers: true) }
 
         subject(:model_fit) do
           case constructor_method

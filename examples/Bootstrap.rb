@@ -1,6 +1,9 @@
 require 'mixed_models'
 
 df = Daru::DataFrame.from_csv './data/alien_species.csv'
+# mixed_models expects all variable names to be Symbols (not Strings):
+df.vectors = Daru::Index.new( df.vectors.map { |v| v.to_sym } )
+
 model_fit = LMM.from_formula(formula: "Aggression ~ Age + Species + (Age | Location)", data: df)
  
 ########################################################################
