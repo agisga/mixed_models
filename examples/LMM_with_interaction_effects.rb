@@ -4,7 +4,9 @@ require 'mixed_models'
 # Model with interaction effects of two numeric variables, in the fixed and random effects # 
 #############################################################################################
 
-df_num_x_num = Daru::DataFrame.from_csv './data/numeric_x_numeric_interaction.csv'
+# we set headers: true, because mixed_models expects that all variable names in the data frame
+# are ruby Symbols (not Strings, as they would be otherwise)
+df_num_x_num = Daru::DataFrame.from_csv './data/numeric_x_numeric_interaction.csv', headers: true
 
 num_x_num = LMM.from_formula(formula: "y ~ a + b + a:b + (0 + a:b | gr)", data: df_num_x_num)
 
@@ -51,7 +53,9 @@ puts "Standard deviation: \t#{num_x_num.sigma}"
 # in the fixed and random effects  
 #############################################################################################
 
-df_num_x_cat = Daru::DataFrame.from_csv './data/numeric_x_categorical_interaction.csv'
+# we set headers: true, because mixed_models expects that all variable names in the data frame
+# are ruby Symbols (not Strings, as they would be otherwise)
+df_num_x_cat = Daru::DataFrame.from_csv './data/numeric_x_categorical_interaction.csv', headers: true
 
 num_x_cat = LMM.from_formula(formula: "y ~ num + cat + num:cat + (0 + num:cat | gr)", data: df_num_x_cat)
 

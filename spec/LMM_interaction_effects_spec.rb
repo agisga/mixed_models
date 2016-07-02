@@ -6,7 +6,7 @@ describe LMM do
       context "with interaction effects" do
         context "between two numeric variables" do
           
-          let(:df) { Daru::DataFrame.from_csv("spec/data/numeric_x_numeric_interaction.csv") }
+          let(:df) { Daru::DataFrame.from_csv("spec/data/numeric_x_numeric_interaction.csv", headers: true) }
 
           subject(:model_fit) do
             case constructor_method
@@ -94,7 +94,7 @@ describe LMM do
 
           it "has no side effects on the input parameters" do
             reml = true
-            df_unaltered = Daru::DataFrame.from_csv("spec/data/numeric_x_numeric_interaction.csv")
+            df_unaltered = Daru::DataFrame.from_csv("spec/data/numeric_x_numeric_interaction.csv", headers: true)
             weights = Array.new(df_unaltered.nrows) { 1.0 }
             offset = 0.0
 
@@ -117,7 +117,7 @@ describe LMM do
             end
 
             expect(reml).to eq(true)
-            expect(Daru::DataFrame.from_csv("spec/data/numeric_x_numeric_interaction.csv")).to eq(df_unaltered)
+            expect(Daru::DataFrame.from_csv("spec/data/numeric_x_numeric_interaction.csv", headers: true)).to eq(df_unaltered)
             expect(Array.new(df_unaltered.nrows) { 1.0 }).to eq(weights)
             expect(offset).to eq(0.0)
           end
@@ -152,7 +152,7 @@ describe LMM do
 
         context "between a numeric and a categorical variable" do
 
-          let(:df) { Daru::DataFrame.from_csv("spec/data/numeric_x_categorical_interaction.csv") }
+          let(:df) { Daru::DataFrame.from_csv("spec/data/numeric_x_categorical_interaction.csv", headers: true) }
 
           subject(:model_fit) do
             case constructor_method
@@ -257,7 +257,7 @@ describe LMM do
 
         context "between a categorical and a numeric variable" do
 
-          let(:df) { Daru::DataFrame.from_csv("spec/data/numeric_x_categorical_interaction.csv") }
+          let(:df) { Daru::DataFrame.from_csv("spec/data/numeric_x_categorical_interaction.csv", headers: true) }
 
           subject(:model_fit) do
             case constructor_method
@@ -312,7 +312,7 @@ describe LMM do
 
         context "between two categorical variables" do
 
-          let(:df) { Daru::DataFrame.from_csv("spec/data/categorical_x_categorical_interaction.csv") }
+          let(:df) { Daru::DataFrame.from_csv("spec/data/categorical_x_categorical_interaction.csv", headers: true) }
 
           context "with both non-interaction fixed effects and fixed intercept, but no random non-interaction effects and without random intercept" do
 

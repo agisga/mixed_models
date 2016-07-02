@@ -5,7 +5,7 @@ describe LMM do
     describe constructor_method do
       context "with multiple crossed random effects" do
         
-        let(:df) { Daru::DataFrame.from_csv("spec/data/crossed_effects_data.csv") }
+        let(:df) { Daru::DataFrame.from_csv("spec/data/crossed_effects_data.csv", headers: true) }
 
         subject(:model_fit) do
           case constructor_method

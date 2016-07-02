@@ -69,7 +69,9 @@ puts "-------------------------------------------"
 # Model with numerical and categorical variables as fixed and random effects # 
 ##############################################################################
 
-df = Daru::DataFrame.from_csv './data/categorical_and_crossed_ran_ef.csv'
+# we set headers: true, because mixed_models expects that all variable names in the data frame
+# are ruby Symbols (not Strings, as they would be otherwise)
+df = Daru::DataFrame.from_csv './data/categorical_and_crossed_ran_ef.csv', headers: true
 
 # Fit the model
 # This is really slow

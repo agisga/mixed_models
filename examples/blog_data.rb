@@ -26,8 +26,8 @@ require 'daru'
 df = Daru::DataFrame.from_csv './data/blogData_train_with_header.csv'
 
 # select a subset of columns of the data frame
-keep = [:v16, :v41, :v54, :v62, :v270, :v271, :v272, 
-        :v273, :v274, :v275, :v276, :v277, :v280]
+keep = ['v16', 'v41', 'v54', 'v62', 'v270', 'v271', 'v272', 
+        'v273', 'v274', 'v275', 'v276', 'v277', 'v280']
 blog_data = df[*keep]
 df = nil
 
